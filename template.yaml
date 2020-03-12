@@ -1,0 +1,26 @@
+# https://github.com/awslabs/serverless-application-model/blob/develop/versions/2016-10-31.md
+# Indentation needs to be set with spaces, because YAML...
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Lambda function that builds Battlegrounds hero stats on a regular schedule
+
+Resources:
+    BuildBgsHeroStatsFunction:
+        Type: AWS::Serverless::Function
+        Properties:
+            Handler: build-battlegrounds-hero-stats.default
+            Runtime: nodejs10.x
+            Timeout: 900
+            CodeUri: ./dist/build-battlegrounds-hero-stats
+            MemorySize: 128
+            Policies:
+                - AWSLambdaVPCAccessExecutionRole
+                - AmazonSESFullAccess
+                - SecretsManagerReadWrite
+                - AmazonSNSReadOnlyAccess
+            Events:
+                # Populate the info on the last hour
+                LastPeriodTrigger:
+                    Type: Schedule
+                    Properties:
+                        Schedule: cron(0 1 * * ? *) # Triggers every day at 1 AM
