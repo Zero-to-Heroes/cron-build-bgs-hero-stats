@@ -65,9 +65,37 @@ const updateStats = async (
 	// `;
 	console.log('running query', heroPopularityQuery);
 	const heroPopularityResults: readonly any[] = await mysqlStats.query(heroPopularityQuery);
+	console.log('dbResults', heroPopularityResults);
+
+	const heroTop4Query = `
+		SELECT playerCardId, count(*) as count
+		FROM replay_summary
+		WHERE creationDate > '${creationDate}'
+		AND gameMode = 'battlegrounds'
+		AND playerCardId like 'TB_BaconShop_Hero%'
+		AND buildNumber = ${buildNumber}
+		AND additionalResult <= 4
+		GROUP BY playerCardId
+	`;
+	// console.log('running query', heroPopularityQuery);
+	const heroTop4Results: readonly any[] = await mysqlStats.query(heroTop4Query);
+	// console.log('dbResults', heroTop4Results);
+
+	const heroTop1Query = `
+		SELECT playerCardId, count(*) as count
+		FROM replay_summary
+		WHERE creationDate > '${creationDate}'
+		AND gameMode = 'battlegrounds'
+		AND playerCardId like 'TB_BaconShop_Hero%'
+		AND buildNumber = ${buildNumber}
+		AND additionalResult = 1
+		GROUP BY playerCardId
+	`;
+	// console.log('running query', heroPopularityQuery);
+	const heroTop1Results: readonly any[] = await mysqlStats.query(heroTop1Query);
+	// console.log('dbResults', heroTop4Results);
 	// console.log('hero results', heroPopularityResults.length);
 	// const grouped = groupBy(result => result.playerCardId)(heroPopularityResults);
-	console.log('dbResults', heroPopularityResults);
 	// console.log('grouped', grouped);
 	const total = heroPopularityResults.map(result => result.count).reduce((a, b) => a + b, 0);
 	const stats: BgsGlobalHeroStat[] = heroPopularityResults.map(
@@ -76,6 +104,20 @@ const updateStats = async (
 				id: result.playerCardId,
 				popularity: (100 * result.count) / total,
 				averagePosition: result.position || 0,
+				top4:
+					(100 *
+						heroTop4Results
+							.filter(r => r.playerCardId === result.playerCardId)
+							.map(r => r.count)
+							.reduce((a, b) => a + b, 0)) /
+					result.count,
+				top1:
+					(100 *
+						heroTop1Results
+							.filter(r => r.playerCardId === result.playerCardId)
+							.map(r => r.count)
+							.reduce((a, b) => a + b, 0)) /
+					result.count,
 			} as BgsGlobalHeroStat),
 	);
 	console.log('build stats', JSON.stringify(stats, null, 4));
@@ -86,14 +128,13 @@ const updateStats = async (
 		const values = stats
 			.map(
 				stat =>
-					`('${stat.id}', ${insertCreationDate ? "'" + now + "'" : null}, ${stat.popularity}, ${
-						stat.averagePosition
-					})`,
+					`('${stat.id}', ${insertCreationDate ? "'" + now + "'" : null}, ${stat.popularity}, 
+					${stat.averagePosition}, ${stat.top4}, ${stat.top1})`,
 			)
 			.join(',');
 		const insertQuery = `
 				INSERT INTO bgs_hero_stats
-				(heroCardId, date, popularity, averagePosition)
+				(heroCardId, date, popularity, averagePosition, top4, top1)
 				VALUES ${values}
 			`;
 		console.log('running update query', insertQuery);
@@ -107,12 +148,27 @@ const updateStats = async (
 		for (const stat of stats) {
 			const updateQuery = `
 					UPDATE bgs_hero_stats
-					SET popularity = ${stat.popularity}, averagePosition = ${stat.averagePosition}
+					SET 
+						popularity = ${stat.popularity}, 
+						averagePosition = ${stat.averagePosition},
+						top4 = ${stat.top4},
+						top1 = ${stat.top1}
 					WHERE heroCardId = '${stat.id}' AND date is NULL
 				`;
 			console.log('running update query', updateQuery);
-			const updateResult = await mysqlBgs.query(updateQuery);
-			console.log('data inserted', updateResult);
+			const updateResult: any = await mysqlBgs.query(updateQuery);
+			console.log('data updated?', updateResult, updateResult.affectedRows);
+			// Non-existing data
+			if (updateResult.affectedRows === 0) {
+				const insertQuery = `
+					INSERT INTO bgs_hero_stats
+					(heroCardId, date, popularity, averagePosition, top4, top1)
+					VALUES ('${stat.id}', NULL, ${stat.popularity}, ${stat.averagePosition}, ${stat.top4}, ${stat.top1})
+				`;
+				console.log('running insert query', insertQuery);
+				const insertResult = await mysqlBgs.query(insertQuery);
+				console.log('data inserted?', insertResult);
+			}
 		}
 		// First delete existing results
 		// const deleteQuery = `
