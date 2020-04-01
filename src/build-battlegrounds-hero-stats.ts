@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
 import { ServerlessMysql } from 'serverless-mysql';
-import { BgsGlobalHeroStat } from './bgs-global-hero-stat';
+import { BgsGlobalHeroStat, BgsHeroTier } from './bgs-global-hero-stat';
 import { getConnection as getConnectionStats } from './db/rds';
 import { getConnection as getConnectionBgs } from './db/rds-bgs';
 
@@ -55,6 +55,7 @@ const updateStats = async (
 		AND gameMode = 'battlegrounds'
 		AND playerCardId like 'TB_BaconShop_Hero%'
 		AND buildNumber = ${buildNumber}
+		AND playerRank > 6000
 		GROUP BY playerCardId
 	`;
 	// const heroPopularityQuery = `
@@ -75,6 +76,7 @@ const updateStats = async (
 		AND playerCardId like 'TB_BaconShop_Hero%'
 		AND buildNumber = ${buildNumber}
 		AND additionalResult <= 4
+		AND playerRank > 6000
 		GROUP BY playerCardId
 	`;
 	// console.log('running query', heroPopularityQuery);
@@ -89,6 +91,7 @@ const updateStats = async (
 		AND playerCardId like 'TB_BaconShop_Hero%'
 		AND buildNumber = ${buildNumber}
 		AND additionalResult = 1
+		AND playerRank > 6000
 		GROUP BY playerCardId
 	`;
 	// console.log('running query', heroPopularityQuery);
@@ -118,6 +121,7 @@ const updateStats = async (
 							.map(r => r.count)
 							.reduce((a, b) => a + b, 0)) /
 					result.count,
+				tier: getTier(result.position),
 			} as BgsGlobalHeroStat),
 	);
 	console.log('build stats', JSON.stringify(stats, null, 4));
@@ -129,12 +133,12 @@ const updateStats = async (
 			.map(
 				stat =>
 					`('${stat.id}', ${insertCreationDate ? "'" + now + "'" : null}, ${stat.popularity}, 
-					${stat.averagePosition}, ${stat.top4}, ${stat.top1})`,
+					${stat.averagePosition}, ${stat.top4}, ${stat.top1}, '${stat.tier}')`,
 			)
 			.join(',');
 		const insertQuery = `
 				INSERT INTO bgs_hero_stats
-				(heroCardId, date, popularity, averagePosition, top4, top1)
+				(heroCardId, date, popularity, averagePosition, top4, top1, tier)
 				VALUES ${values}
 			`;
 		console.log('running update query', insertQuery);
@@ -152,7 +156,8 @@ const updateStats = async (
 						popularity = ${stat.popularity}, 
 						averagePosition = ${stat.averagePosition},
 						top4 = ${stat.top4},
-						top1 = ${stat.top1}
+						top1 = ${stat.top1},
+						tier = '${stat.tier}'
 					WHERE heroCardId = '${stat.id}' AND date is NULL
 				`;
 			console.log('running update query', updateQuery);
@@ -162,8 +167,8 @@ const updateStats = async (
 			if (updateResult.affectedRows === 0) {
 				const insertQuery = `
 					INSERT INTO bgs_hero_stats
-					(heroCardId, date, popularity, averagePosition, top4, top1)
-					VALUES ('${stat.id}', NULL, ${stat.popularity}, ${stat.averagePosition}, ${stat.top4}, ${stat.top1})
+					(heroCardId, date, popularity, averagePosition, top4, top1, tier)
+					VALUES ('${stat.id}', NULL, ${stat.popularity}, ${stat.averagePosition}, ${stat.top4}, ${stat.top1}, '${stat.tier}')
 				`;
 				console.log('running insert query', insertQuery);
 				const insertResult = await mysqlBgs.query(insertQuery);
@@ -185,4 +190,17 @@ const updateStats = async (
 	}
 
 	return { statusCode: 200, body: null };
+};
+
+const getTier = (averagePosition: number): BgsHeroTier => {
+	if (averagePosition < 3.7) {
+		return 'S';
+	} else if (averagePosition < 4) {
+		return 'A';
+	} else if (averagePosition < 4.4) {
+		return 'B';
+	} else if (averagePosition < 4.7) {
+		return 'C';
+	}
+	return 'D';
 };

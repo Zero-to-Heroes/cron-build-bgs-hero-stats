@@ -4,4 +4,7 @@ export class BgsGlobalHeroStat {
 	averagePosition: number;
 	top4: number;
 	top1: number;
+	tier: BgsHeroTier;
 }
+
+export type BgsHeroTier = 'S' | 'A' | 'B' | 'C' | 'D';
