@@ -18,6 +18,8 @@ Resources:
                 - AmazonSESFullAccess
                 - SecretsManagerReadWrite
                 - AmazonSNSReadOnlyAccess
+            Tags:
+                LambdaName: cron-build-bgs-hero-stats
             Events:
                 # Populate the info on the last hour
                 LastPeriodTrigger:
