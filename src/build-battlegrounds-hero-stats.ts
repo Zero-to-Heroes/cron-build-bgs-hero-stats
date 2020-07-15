@@ -8,7 +8,7 @@ import { getConnection as getConnectionBgs } from './db/rds-bgs';
 // the more traditional callback-style handler.
 // [1]: https://aws.amazon.com/blogs/compute/node-js-8-10-runtime-now-available-in-aws-lambda/
 export default async (event): Promise<any> => {
-	console.log('event', JSON.stringify(event, null, 4));
+	// console.log('event', JSON.stringify(event, null, 4));
 	const mysqlBgs = await getConnectionBgs();
 	const mysqlStats = await getConnectionStats();
 
@@ -18,7 +18,9 @@ export default async (event): Promise<any> => {
 	const buildNumber = buildNumberResult[0].buildNumber;
 	console.log('buildNumber', buildNumber);
 
+	console.log('building aggregated stats');
 	await updateAggregatedStats(mysqlBgs, mysqlStats, buildNumber);
+	console.log('building last period stats');
 	await updateLastPeriodStats(mysqlBgs, mysqlStats, buildNumber);
 
 	return { statusCode: 200, body: null };
@@ -50,10 +52,10 @@ const updateStats = async (
 	const allHeroesQuery = `
 		SELECT distinct playerCardId
 		FROM replay_summary
-		WHERE creationDate > '${creationDate}'
-		AND gameMode = 'battlegrounds'
+		WHERE gameMode = 'battlegrounds'
 		AND playerCardId like 'TB_BaconShop_Hero%'
 		AND buildNumber = ${buildNumber}
+		${creationDate ? "AND creationDate > '" + creationDate + "'" : ''}
 		GROUP BY playerCardId
 	`;
 	console.log('running query', allHeroesQuery);
@@ -63,11 +65,11 @@ const updateStats = async (
 	const heroPopularityQuery = `
 		SELECT playerCardId, avg(additionalResult) as position, count(*) as count
 		FROM replay_summary
-		WHERE creationDate > '${creationDate}'
-		AND gameMode = 'battlegrounds'
+		WHERE gameMode = 'battlegrounds'
 		AND playerCardId like 'TB_BaconShop_Hero%'
 		AND buildNumber = ${buildNumber}
-		AND playerRank > 6000
+		${creationDate ? "AND creationDate > '" + creationDate + "'" : ''}
+		AND playerRank > 5000
 		GROUP BY playerCardId
 	`;
 	// const heroPopularityQuery = `
@@ -83,12 +85,12 @@ const updateStats = async (
 	const heroTop4Query = `
 		SELECT playerCardId, count(*) as count
 		FROM replay_summary
-		WHERE creationDate > '${creationDate}'
-		AND gameMode = 'battlegrounds'
+		WHERE gameMode = 'battlegrounds'
 		AND playerCardId like 'TB_BaconShop_Hero%'
 		AND buildNumber = ${buildNumber}
 		AND additionalResult <= 4
-		AND playerRank > 6000
+		AND playerRank > 5000
+		${creationDate ? "AND creationDate > '" + creationDate + "'" : ''}
 		GROUP BY playerCardId
 	`;
 	// console.log('running query', heroPopularityQuery);
@@ -98,12 +100,12 @@ const updateStats = async (
 	const heroTop1Query = `
 		SELECT playerCardId, count(*) as count
 		FROM replay_summary
-		WHERE creationDate > '${creationDate}'
-		AND gameMode = 'battlegrounds'
+		WHERE gameMode = 'battlegrounds'
 		AND playerCardId like 'TB_BaconShop_Hero%'
 		AND buildNumber = ${buildNumber}
 		AND additionalResult = 1
-		AND playerRank > 6000
+		AND playerRank > 5000
+		${creationDate ? "AND creationDate > '" + creationDate + "'" : ''}
 		GROUP BY playerCardId
 	`;
 	// console.log('running query', heroPopularityQuery);
@@ -143,6 +145,7 @@ const updateStats = async (
 									.reduce((a, b) => a + b, 0)) /
 						  result.count,
 					tier: getTier(result.position),
+					totalGames: result.count,
 				} as BgsGlobalHeroStat),
 		);
 	console.log('build stats', JSON.stringify(stats, null, 4));
@@ -155,12 +158,12 @@ const updateStats = async (
 			.map(
 				stat =>
 					`('${stat.id}', ${insertCreationDate ? "'" + now + "'" : null}, ${stat.popularity}, 
-					${stat.averagePosition}, ${stat.top4}, ${stat.top1}, '${stat.tier}')`,
+					${stat.averagePosition}, ${stat.top4}, ${stat.top1}, '${stat.tier}', ${stat.totalGames})`,
 			)
 			.join(',');
 		const insertQuery = `
 				INSERT INTO bgs_hero_stats
-				(heroCardId, date, popularity, averagePosition, top4, top1, tier)
+				(heroCardId, date, popularity, averagePosition, top4, top1, tier, totalGames)
 				VALUES ${values}
 			`;
 		console.log('running update query', insertQuery);
@@ -179,18 +182,19 @@ const updateStats = async (
 						averagePosition = ${stat.averagePosition},
 						top4 = ${stat.top4},
 						top1 = ${stat.top1},
-						tier = '${stat.tier}'
+						tier = '${stat.tier}',
+						totalGames = ${stat.totalGames}
 					WHERE heroCardId = '${stat.id}' AND date is NULL
 				`;
 			console.log('running update query', updateQuery);
 			const updateResult: any = await mysqlBgs.query(updateQuery);
-			console.log('data updated?', updateResult, updateResult.affectedRows);
+			// console.log('data updated?', updateResult.affectedRows);
 			// Non-existing data
 			if (updateResult.affectedRows === 0) {
 				const insertQuery = `
 					INSERT INTO bgs_hero_stats
-					(heroCardId, date, popularity, averagePosition, top4, top1, tier)
-					VALUES ('${stat.id}', NULL, ${stat.popularity}, ${stat.averagePosition}, ${stat.top4}, ${stat.top1}, '${stat.tier}')
+					(heroCardId, date, popularity, averagePosition, top4, top1, tier, totalGames)
+					VALUES ('${stat.id}', NULL, ${stat.popularity}, ${stat.averagePosition}, ${stat.top4}, ${stat.top1}, '${stat.tier}', ${stat.totalGames})
 				`;
 				console.log('running insert query', insertQuery);
 				const insertResult = await mysqlBgs.query(insertQuery);
