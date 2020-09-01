@@ -3,6 +3,7 @@ import { ServerlessMysql } from 'serverless-mysql';
 import { BgsGlobalHeroStat, BgsHeroTier } from './bgs-global-hero-stat';
 import { getConnection as getConnectionStats } from './db/rds';
 import { getConnection as getConnectionBgs } from './db/rds-bgs';
+import { http } from './utils/util-functions';
 
 // This example demonstrates a NodeJS 8.10 async handler[1], however of course you could use
 // the more traditional callback-style handler.
@@ -12,18 +13,24 @@ export default async (event): Promise<any> => {
 	const mysqlBgs = await getConnectionBgs();
 	const mysqlStats = await getConnectionStats();
 
-	const buildNumberResult: any[] = await mysqlStats.query(
-		'SELECT buildNumber FROM replay_summary ORDER BY buildNumber desc LIMIT 1',
-	);
-	const buildNumber = buildNumberResult[0].buildNumber;
-	console.log('buildNumber', buildNumber);
+	const lastBattlegroundsPatch = await getLastBattlegroundsPatch();
+	console.log('buildNumber', lastBattlegroundsPatch);
 
+	console.log();
 	console.log('building aggregated stats');
-	await updateAggregatedStats(mysqlBgs, mysqlStats, buildNumber);
+	await updateAggregatedStats(mysqlBgs, mysqlStats, lastBattlegroundsPatch);
+
+	console.log();
 	console.log('building last period stats');
-	await updateLastPeriodStats(mysqlBgs, mysqlStats, buildNumber);
+	await updateLastPeriodStats(mysqlBgs, mysqlStats, lastBattlegroundsPatch);
 
 	return { statusCode: 200, body: null };
+};
+
+const getLastBattlegroundsPatch = async (): Promise<number> => {
+	const patchInfo = await http(`https://static.zerotoheroes.com/hearthstone/data/patches.json`);
+	const structuredPatch = JSON.parse(patchInfo);
+	return structuredPatch.currentBattlegroundsMetaPatch;
 };
 
 const updateAggregatedStats = async (mysqlBgs: ServerlessMysql, mysqlStats: ServerlessMysql, buildNumber: number) => {
@@ -35,9 +42,9 @@ const updateAggregatedStats = async (mysqlBgs: ServerlessMysql, mysqlStats: Serv
 };
 
 const updateLastPeriodStats = async (mysqlBgs: ServerlessMysql, mysqlStats: ServerlessMysql, buildNumber: number) => {
-	// Get all the reviews from the last hour
+	// Get all the reviews from the last day
 	const now = Date.now();
-	const earliestStartDate = new Date(now - 60 * 60 * 1000).toISOString();
+	const earliestStartDate = new Date(now - 24 * 60 * 60 * 1000).toISOString();
 	console.log('earliestStartDate', earliestStartDate);
 	await updateStats(mysqlBgs, mysqlStats, earliestStartDate, buildNumber, true);
 };
@@ -54,104 +61,36 @@ const updateStats = async (
 		FROM replay_summary
 		WHERE gameMode = 'battlegrounds'
 		AND playerCardId like 'TB_BaconShop_Hero%'
-		AND buildNumber = ${buildNumber}
+		AND buildNumber >= ${buildNumber}
 		${creationDate ? "AND creationDate > '" + creationDate + "'" : ''}
-		GROUP BY playerCardId
 	`;
 	console.log('running query', allHeroesQuery);
 	const allHeroesResult: readonly any[] = await mysqlStats.query(allHeroesQuery);
+	const allHeroes: readonly string[] = allHeroesResult.map(result => result.playerCardId);
 	console.log('dbResults', allHeroesResult);
-	// We don't use the battlegrounds placement stuff because it's not reliable when the player is not first place
-	const heroPopularityQuery = `
-		SELECT playerCardId, avg(additionalResult) as position, count(*) as count
-		FROM replay_summary
-		WHERE gameMode = 'battlegrounds'
-		AND playerCardId like 'TB_BaconShop_Hero%'
-		AND buildNumber = ${buildNumber}
-		${creationDate ? "AND creationDate > '" + creationDate + "'" : ''}
-		AND playerRank > 5000
-		GROUP BY playerCardId
-	`;
-	// const heroPopularityQuery = `
-	// 	SELECT playerCardId, additionalResult
-	// 	FROM replay_summary
-	// 	WHERE creationDate > '${creationDate}'
-	// 	AND gameMode = 'battlegrounds'
-	// `;
-	console.log('running query', heroPopularityQuery);
-	const heroPopularityResults: readonly any[] = await mysqlStats.query(heroPopularityQuery);
-	console.log('dbResults', heroPopularityResults);
 
-	const heroTop4Query = `
-		SELECT playerCardId, count(*) as count
+	const heroStatsQuery = `
+		SELECT playerCardId, additionalResult, count(*) as count
 		FROM replay_summary
 		WHERE gameMode = 'battlegrounds'
 		AND playerCardId like 'TB_BaconShop_Hero%'
-		AND buildNumber = ${buildNumber}
-		AND additionalResult <= 4
-		AND playerRank > 5000
+		AND buildNumber >= ${buildNumber}
 		${creationDate ? "AND creationDate > '" + creationDate + "'" : ''}
-		GROUP BY playerCardId
+		AND playerRank > 5000
+		GROUP BY playerCardId, additionalResult
 	`;
-	// console.log('running query', heroPopularityQuery);
-	const heroTop4Results: readonly any[] = await mysqlStats.query(heroTop4Query);
-	// console.log('dbResults', heroTop4Results);
+	console.log('running query', heroStatsQuery);
+	const heroStatsResults: readonly any[] = ((await mysqlStats.query(heroStatsQuery)) as any[])
+		.map(result => ({
+			...result,
+			additionalResult: parseInt(result.additionalResult),
+		}))
+		.filter(result => result.additionalResult > 0);
+	console.log('dbResults', heroStatsResults);
 
-	const heroTop1Query = `
-		SELECT playerCardId, count(*) as count
-		FROM replay_summary
-		WHERE gameMode = 'battlegrounds'
-		AND playerCardId like 'TB_BaconShop_Hero%'
-		AND buildNumber = ${buildNumber}
-		AND additionalResult = 1
-		AND playerRank > 5000
-		${creationDate ? "AND creationDate > '" + creationDate + "'" : ''}
-		GROUP BY playerCardId
-	`;
-	// console.log('running query', heroPopularityQuery);
-	const heroTop1Results: readonly any[] = await mysqlStats.query(heroTop1Query);
-	// console.log('dbResults', heroTop4Results);
-	// console.log('hero results', heroPopularityResults.length);
-	// const grouped = groupBy(result => result.playerCardId)(heroPopularityResults);
-	// console.log('grouped', grouped);
-	const total = heroPopularityResults.map(result => result.count).reduce((a, b) => a + b, 0);
-	const stats: BgsGlobalHeroStat[] = allHeroesResult
-		.map(
-			result =>
-				heroPopularityResults.find(r => r.playerCardId === result.playerCardId) || {
-					playerCardId: result.playerCardId,
-				},
-		)
-		.map(
-			result =>
-				({
-					id: result.playerCardId,
-					popularity: (100 * (result.count || 0)) / total,
-					averagePosition: result.position || 0,
-					top4: !result.count
-						? 0
-						: (100 *
-								heroTop4Results
-									.filter(r => r.playerCardId === result.playerCardId)
-									.map(r => r.count || 0)
-									.reduce((a, b) => a + b, 0)) /
-						  result.count,
-					top1: !result.count
-						? 0
-						: (100 *
-								heroTop1Results
-									.filter(r => r.playerCardId === result.playerCardId)
-									.map(r => r.count)
-									.reduce((a, b) => a + b, 0)) /
-						  result.count,
-					tier: getTier(result.position),
-					totalGames: result.count,
-				} as BgsGlobalHeroStat),
-		);
+	const stats: BgsGlobalHeroStat[] = allHeroes.map(heroCardId => buildHeroInfo(heroCardId, heroStatsResults));
 	console.log('build stats', JSON.stringify(stats, null, 4));
-	console.log('from heroPopularityResults', JSON.stringify(heroPopularityResults, null, 4));
 
-	// const heroCardIds = stats.map(stat => "'" + stat.id + "'").join(',');
 	const now = new Date().toISOString();
 	if (insertCreationDate) {
 		const values = stats
@@ -201,21 +140,41 @@ const updateStats = async (
 				console.log('data inserted?', insertResult);
 			}
 		}
-		// First delete existing results
-		// const deleteQuery = `
-		// 	DELETE FROM bgs_hero_stats
-		// 	WHERE heroCardId in (${heroCardIds}) AND date is NULL
-		// `;
-		// const deleteResult = await mysqlBgs.query(deleteQuery);
-		// console.log('data removed', deleteResult);
-		// const updateQuery = `
-		// 		UPDATE bgs_hero_stats
-		// 		(heroCardId, date, popularity, averagePosition)
-		// 		VALUES ${values}
-		// 	`;
 	}
 
 	return { statusCode: 200, body: null };
+};
+
+const buildHeroInfo = (heroCardId: string, heroStatsResults: readonly any[]): BgsGlobalHeroStat => {
+	const total = heroStatsResults.map(result => result.count).reduce((a, b) => a + b, 0);
+	const heroStatsForHero = heroStatsResults.filter(result => result.playerCardId === heroCardId);
+	const totalGamesPlayedForHero = heroStatsForHero.map(result => result.count).reduce((a, b) => a + b, 0) || 0;
+	const averagePosition =
+		(heroStatsForHero.map(result => result.additionalResult * result.count).reduce((a, b) => a + b, 0) || 0) /
+		totalGamesPlayedForHero;
+	const top4Percentage =
+		(100 *
+			(heroStatsForHero
+				.filter(result => result.additionalResult <= 4)
+				.map(result => result.count)
+				.reduce((a, b) => a + b, 0) || 0)) /
+		totalGamesPlayedForHero;
+	const top1Percentage =
+		(100 *
+			(heroStatsForHero
+				.filter(result => result.additionalResult === 1)
+				.map(result => result.count)
+				.reduce((a, b) => a + b, 0) || 0)) /
+		totalGamesPlayedForHero;
+	return {
+		id: heroCardId,
+		popularity: (100 * totalGamesPlayedForHero) / total,
+		averagePosition: averagePosition,
+		top4: top4Percentage,
+		top1: top1Percentage,
+		tier: getTier(averagePosition),
+		totalGames: totalGamesPlayedForHero,
+	} as BgsGlobalHeroStat;
 };
 
 const getTier = (averagePosition: number): BgsHeroTier => {
