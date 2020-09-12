@@ -36,11 +36,12 @@ const getLastBattlegroundsPatch = async (): Promise<number> => {
 const updateAggregatedStats = async (mysqlBgs: ServerlessMysql, mysqlStats: ServerlessMysql, buildNumber: number) => {
 	// This won't be fully accurate, as not all update will be installed simulatenously, but it's good enough
 	const now = Date.now();
-	const earliestStartDate = new Date(now - 7 * 24 * 60 * 60 * 1000).toISOString();
+	const earliestStartDate = new Date(now - 14 * 24 * 60 * 60 * 1000).toISOString();
 	console.log('earliestStartDate', earliestStartDate);
 	await updateStats(mysqlBgs, mysqlStats, earliestStartDate, buildNumber, false);
 };
 
+// TODO: remove this lastperiod stuff, add a new column with the last update Date, and do a query on that last update date
 const updateLastPeriodStats = async (mysqlBgs: ServerlessMysql, mysqlStats: ServerlessMysql, buildNumber: number) => {
 	// Get all the reviews from the last day
 	const now = Date.now();
@@ -66,17 +67,19 @@ const updateStats = async (
 	`;
 	console.log('running query', allHeroesQuery);
 	const allHeroesResult: readonly any[] = await mysqlStats.query(allHeroesQuery);
-	const allHeroes: readonly string[] = allHeroesResult.map(result => result.playerCardId);
+	const allHeroes: readonly string[] = allHeroesResult
+		.map(result => result.playerCardId)
+		.filter(playerCardId => playerCardId !== 'TB_BaconShop_HERO_59t');
 	console.log('dbResults', allHeroesResult);
 
 	const heroStatsQuery = `
-		SELECT playerCardId, additionalResult, count(*) as count
+		SELECT playerCardId, additionalResult, count(*) as count, max(creationDate) as lastPlayedDate
 		FROM replay_summary
 		WHERE gameMode = 'battlegrounds'
 		AND playerCardId like 'TB_BaconShop_Hero%'
 		AND buildNumber >= ${buildNumber}
 		${creationDate ? "AND creationDate > '" + creationDate + "'" : ''}
-		AND playerRank > 5000
+		AND playerRank > 6000
 		GROUP BY playerCardId, additionalResult
 	`;
 	console.log('running query', heroStatsQuery);
