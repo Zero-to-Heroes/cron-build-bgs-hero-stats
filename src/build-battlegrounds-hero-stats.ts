@@ -36,12 +36,12 @@ const getLastBattlegroundsPatch = async (): Promise<number> => {
 const updateAggregatedStats = async (mysqlBgs: ServerlessMysql, mysqlStats: ServerlessMysql, buildNumber: number) => {
 	// This won't be fully accurate, as not all update will be installed simulatenously, but it's good enough
 	const now = Date.now();
-	const earliestStartDate = new Date(now - 14 * 24 * 60 * 60 * 1000).toISOString();
+	const earliestStartDate = new Date(now - 5 * 24 * 60 * 60 * 1000).toISOString();
 	console.log('earliestStartDate', earliestStartDate);
 	await updateStats(mysqlBgs, mysqlStats, earliestStartDate, buildNumber, false);
 };
 
-// TODO: remove this lastperiod stuff, add a new column with the last update Date, and do a query on that last update date
+//  TODO: remove this lastperiod stuff, add a new column with the last update Date, and do a query on that last update date
 const updateLastPeriodStats = async (mysqlBgs: ServerlessMysql, mysqlStats: ServerlessMysql, buildNumber: number) => {
 	// Get all the reviews from the last day
 	const now = Date.now();
