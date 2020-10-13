@@ -36,7 +36,7 @@ const getLastBattlegroundsPatch = async (): Promise<number> => {
 const updateAggregatedStats = async (mysqlBgs: ServerlessMysql, mysqlStats: ServerlessMysql, buildNumber: number) => {
 	// This won't be fully accurate, as not all update will be installed simulatenously, but it's good enough
 	const now = Date.now();
-	const earliestStartDate = new Date(now - 5 * 24 * 60 * 60 * 1000).toISOString();
+	const earliestStartDate = new Date(now - 10 * 24 * 60 * 60 * 1000).toISOString();
 	console.log('earliestStartDate', earliestStartDate);
 	await updateStats(mysqlBgs, mysqlStats, earliestStartDate, buildNumber, false);
 };
@@ -70,7 +70,7 @@ const updateStats = async (
 	const allHeroes: readonly string[] = allHeroesResult
 		.map(result => result.playerCardId)
 		.filter(playerCardId => playerCardId !== 'TB_BaconShop_HERO_59t');
-	console.log('dbResults', allHeroesResult);
+	// console.log('dbResults', allHeroesResult);
 
 	const heroStatsQuery = `
 		SELECT playerCardId, additionalResult, count(*) as count, max(creationDate) as lastPlayedDate
@@ -79,7 +79,6 @@ const updateStats = async (
 		AND playerCardId like 'TB_BaconShop_Hero%'
 		AND buildNumber >= ${buildNumber}
 		${creationDate ? "AND creationDate > '" + creationDate + "'" : ''}
-		AND playerRank > 6000
 		GROUP BY playerCardId, additionalResult
 	`;
 	console.log('running query', heroStatsQuery);
@@ -88,11 +87,12 @@ const updateStats = async (
 			...result,
 			additionalResult: parseInt(result.additionalResult),
 		}))
-		.filter(result => result.additionalResult > 0);
-	console.log('dbResults', heroStatsResults);
+		.filter(result => result.additionalResult > 0)
+		.filter(result => result.playerCardId !== 'TB_BaconShop_HERO_59t');
+	// console.log('dbResults', heroStatsResults);
 
 	const stats: BgsGlobalHeroStat[] = allHeroes.map(heroCardId => buildHeroInfo(heroCardId, heroStatsResults));
-	console.log('build stats', JSON.stringify(stats, null, 4));
+	// console.log('build stats', JSON.stringify(stats, null, 4));
 
 	const now = new Date().toISOString();
 	if (insertCreationDate) {
@@ -108,9 +108,9 @@ const updateStats = async (
 				(heroCardId, date, popularity, averagePosition, top4, top1, tier, totalGames)
 				VALUES ${values}
 			`;
-		console.log('running update query', insertQuery);
+		// console.log('running update query', insertQuery);
 		const updateResult = await mysqlBgs.query(insertQuery);
-		console.log('data inserted', updateResult);
+		// console.log('data inserted', updateResult);
 	}
 	// Here the assumption is that we have run the INSERT once, and now we just update the data
 	// NULL date means aggregated data from the latest period. Maybe at one point we'll need
@@ -128,7 +128,7 @@ const updateStats = async (
 						totalGames = ${stat.totalGames}
 					WHERE heroCardId = '${stat.id}' AND date is NULL
 				`;
-			console.log('running update query', updateQuery);
+			// console.log('running update query', updateQuery);
 			const updateResult: any = await mysqlBgs.query(updateQuery);
 			// console.log('data updated?', updateResult.affectedRows);
 			// Non-existing data
@@ -138,9 +138,9 @@ const updateStats = async (
 					(heroCardId, date, popularity, averagePosition, top4, top1, tier, totalGames)
 					VALUES ('${stat.id}', NULL, ${stat.popularity}, ${stat.averagePosition}, ${stat.top4}, ${stat.top1}, '${stat.tier}', ${stat.totalGames})
 				`;
-				console.log('running insert query', insertQuery);
+				// console.log('running insert query', insertQuery);
 				const insertResult = await mysqlBgs.query(insertQuery);
-				console.log('data inserted?', insertResult);
+				// console.log('data inserted?', insertResult);
 			}
 		}
 	}
@@ -183,7 +183,7 @@ const buildHeroInfo = (heroCardId: string, heroStatsResults: readonly any[]): Bg
 const getTier = (averagePosition: number): BgsHeroTier => {
 	if (averagePosition < 3.7) {
 		return 'S';
-	} else if (averagePosition < 4) {
+	} else if (averagePosition < 4.1) {
 		return 'A';
 	} else if (averagePosition < 4.4) {
 		return 'B';
