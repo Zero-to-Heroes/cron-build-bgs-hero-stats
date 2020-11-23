@@ -10,7 +10,7 @@ Resources:
         Properties:
             Handler: build-battlegrounds-hero-stats.default
             Runtime: nodejs10.x
-            Timeout: 900
+            Timeout: 200
             CodeUri: ./dist/build-battlegrounds-hero-stats
             MemorySize: 128
             # https://stackoverflow.com/questions/39144688/aws-lambda-invoke-not-calling-another-lambda-function-node-js
@@ -25,6 +25,7 @@ Resources:
                 - AmazonSESFullAccess
                 - SecretsManagerReadWrite
                 - AmazonSNSReadOnlyAccess
+                - AmazonS3FullAccess
                 # - arn:aws:iam::478062583808:policy/CloudWatchPolicyForLambda # See https://stackoverflow.com/questions/51166504/disable-cloudwatch-to-monitor-logs-for-lambda-function
             Tags:
                 LambdaName: cron-build-bgs-hero-stats

@@ -1,4 +1,5 @@
-import { Map } from 'immutable';
+import { AllCardsService } from '@firestone-hs/reference-data';
+import { ReferenceCard } from '@firestone-hs/reference-data/lib/models/reference-cards/reference-card';
 import fetch, { RequestInfo } from 'node-fetch';
 
 function partitionArray<T>(array: readonly T[], partitionSize: number): readonly T[][] {
@@ -33,18 +34,31 @@ async function sleep(ms) {
 	return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-function groupBy(list, keyGetter): Map<string, any[]> {
-	let map = Map.of();
-	list.forEach(item => {
-		const key = keyGetter(item);
-		const collection = map.get(key);
-		if (!collection) {
-			map = map.set(key, [item]);
-		} else {
-			collection.push(item);
-		}
-	});
-	return map;
-}
+export const groupByFunction = (keyExtractor: (obj: object | string) => string) => array =>
+	array.reduce((objectsByKeyValue, obj) => {
+		const value = keyExtractor(obj);
+		objectsByKeyValue[value] = (objectsByKeyValue[value] || []).concat(obj);
+		return objectsByKeyValue;
+	}, {});
 
-export { partitionArray, http, sleep, groupBy };
+export const toCreationDate = (today: Date): string => {
+	return `${today
+		.toISOString()
+		.slice(0, 19)
+		.replace('T', ' ')}.${today.getMilliseconds()}`;
+};
+
+export const formatDate = (today: Date): string => {
+	return `${today
+		.toISOString()
+		.slice(0, 19)
+		.replace('T', ' ')}.000000`;
+};
+
+export const getCardFromCardId = (cardId: number | string, cards: AllCardsService): ReferenceCard => {
+	const isDbfId = !isNaN(+cardId);
+	const card = isDbfId ? cards.getCardFromDbfId(+cardId) : cards.getCard(cardId as string);
+	return card;
+};
+
+export { partitionArray, http, sleep };

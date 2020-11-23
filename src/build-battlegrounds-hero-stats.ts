@@ -1,44 +1,49 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
 import { ServerlessMysql } from 'serverless-mysql';
-import { BgsGlobalHeroStat, BgsHeroTier } from './bgs-global-hero-stat';
+import { gzipSync } from 'zlib';
+import { BgsGlobalHeroStat, BgsHeroTier } from './bgs-global-stats';
 import { getConnection as getConnectionStats } from './db/rds';
 import { getConnection as getConnectionBgs } from './db/rds-bgs';
+import { S3 } from './db/s3';
+import { loadStats } from './retrieve-bgs-global-stats';
 import { http } from './utils/util-functions';
+
+const s3 = new S3();
 
 // This example demonstrates a NodeJS 8.10 async handler[1], however of course you could use
 // the more traditional callback-style handler.
 // [1]: https://aws.amazon.com/blogs/compute/node-js-8-10-runtime-now-available-in-aws-lambda/
 export default async (event): Promise<any> => {
 	// console.log('event', JSON.stringify(event, null, 4));
+	const mysql = await getConnectionStats();
 	const mysqlBgs = await getConnectionBgs();
-	const mysqlStats = await getConnectionStats();
 
 	const lastBattlegroundsPatch = await getLastBattlegroundsPatch();
 	console.log('buildNumber', lastBattlegroundsPatch);
 	console.log('building aggregated stats');
-	await updateAggregatedStats(mysqlBgs, mysqlStats, lastBattlegroundsPatch);
+	await updateAggregatedStats(mysqlBgs, mysql, lastBattlegroundsPatch);
 
 	console.log();
 	console.log('building last period stats');
-	await updateLastPeriodStats(mysqlBgs, mysqlStats, lastBattlegroundsPatch);
+	await updateLastPeriodStats(mysqlBgs, mysql, lastBattlegroundsPatch);
 
-	// const stats = await loadBgsStats();
-	// console.log('built stats to cache');
-	// const stringResults = JSON.stringify(stats);
-	// console.log('stringified results');
-	// const gzippedResults = gzipSync(stringResults);
-	// console.log('zipped results');
-	// await s3.writeFile(
-	// 	gzippedResults,
-	// 	'static.zerotoheroes.com',
-	// 	'api/bgs-global-stats.json',
-	// 	'application/json',
-	// 	'gzip',
-	// );
-	// console.log('new stats saved to s3');
+	const stats = await loadStats(mysql, mysqlBgs);
+	console.log('built stats to cache');
+	const stringResults = JSON.stringify(stats);
+	console.log('stringified results');
+	const gzippedResults = gzipSync(stringResults);
+	console.log('zipped results');
+	await s3.writeFile(
+		gzippedResults,
+		'static.zerotoheroes.com',
+		'api/bgs-global-stats.json',
+		'application/json',
+		'gzip',
+	);
+	console.log('new stats saved to s3');
 
 	await mysqlBgs.end();
-	await mysqlStats.end();
+	await mysql.end();
 
 	return { statusCode: 200, body: null };
 };
