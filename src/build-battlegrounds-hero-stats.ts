@@ -15,14 +15,30 @@ export default async (event): Promise<any> => {
 
 	const lastBattlegroundsPatch = await getLastBattlegroundsPatch();
 	console.log('buildNumber', lastBattlegroundsPatch);
-
-	console.log();
 	console.log('building aggregated stats');
 	await updateAggregatedStats(mysqlBgs, mysqlStats, lastBattlegroundsPatch);
 
 	console.log();
 	console.log('building last period stats');
 	await updateLastPeriodStats(mysqlBgs, mysqlStats, lastBattlegroundsPatch);
+
+	// const stats = await loadBgsStats();
+	// console.log('built stats to cache');
+	// const stringResults = JSON.stringify(stats);
+	// console.log('stringified results');
+	// const gzippedResults = gzipSync(stringResults);
+	// console.log('zipped results');
+	// await s3.writeFile(
+	// 	gzippedResults,
+	// 	'static.zerotoheroes.com',
+	// 	'api/bgs-global-stats.json',
+	// 	'application/json',
+	// 	'gzip',
+	// );
+	// console.log('new stats saved to s3');
+
+	await mysqlBgs.end();
+	await mysqlStats.end();
 
 	return { statusCode: 200, body: null };
 };
