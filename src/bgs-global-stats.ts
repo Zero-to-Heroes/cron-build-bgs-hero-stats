@@ -1,4 +1,5 @@
 export class BgsGlobalStats {
+	lastUpdateDate: string;
 	heroStats: readonly BgsGlobalHeroStat[];
 }
 

@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-empty-interface */
 /* eslint-disable @typescript-eslint/no-use-before-define */
 import { BgsGlobalHeroStat, BgsGlobalStats } from './bgs-global-stats';
-import { groupByFunction, http } from './utils/util-functions';
+import { formatDate, groupByFunction, http } from './utils/util-functions';
 
 export const loadStats = async (mysql, mysqlBgs): Promise<BgsGlobalStats> => {
 	const allHeroes = await getAllHeroes(mysqlBgs);
@@ -51,6 +51,7 @@ export const loadStats = async (mysql, mysqlBgs): Promise<BgsGlobalStats> => {
 	// console.log('hero stats with warbnd stats', heroStatsWithWarband);
 
 	const result = {
+		lastUpdateDate: formatDate(new Date()),
 		heroStats: heroStatsWithWarband,
 	} as BgsGlobalStats;
 	return result;
