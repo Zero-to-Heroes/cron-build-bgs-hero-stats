@@ -82,7 +82,7 @@ const updateStats = async (
 		SELECT distinct playerCardId
 		FROM replay_summary
 		WHERE gameMode = 'battlegrounds'
-		AND playerCardId like 'TB_BaconShop_Hero%'
+		AND (playerCardId like 'TB_BaconShop_Hero%' OR playerCardId like 'BG%')
 		AND buildNumber >= ${buildNumber}
 		${creationDate ? "AND creationDate > '" + creationDate + "'" : ''}
 	`;
@@ -91,13 +91,14 @@ const updateStats = async (
 	const allHeroes: readonly string[] = allHeroesResult
 		.map(result => result.playerCardId)
 		.filter(playerCardId => playerCardId !== 'TB_BaconShop_HERO_59t');
-	// console.log('dbResults', allHeroesResult);
+	console.log('dbResults', allHeroesResult);
 
 	const heroStatsQuery = `
 		SELECT playerCardId, additionalResult, count(*) as count, max(creationDate) as lastPlayedDate
 		FROM replay_summary
 		WHERE gameMode = 'battlegrounds'
-		AND playerCardId like 'TB_BaconShop_Hero%'
+		AND (playerCardId like 'TB_BaconShop_Hero%' OR playerCardId like 'BG%')
+		AND playerRank >= 4000
 		AND buildNumber >= ${buildNumber}
 		${creationDate ? "AND creationDate > '" + creationDate + "'" : ''}
 		GROUP BY playerCardId, additionalResult
