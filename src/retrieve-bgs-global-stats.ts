@@ -26,7 +26,6 @@ export const loadStats = async (mysql, mysqlBgs): Promise<BgsGlobalStats> => {
 	const heroStatsWithWarband = heroStatsWithTribes.map(stat => {
 		const warbandStatInfo = warbandStatsDbResults.filter(warbandStat => warbandStat.heroCardId === stat.id);
 		const winrateInfo = winrateDbResults.filter(warbandStat => warbandStat.heroCardId === stat.id);
-		// console.log('winrateInfo for', stat.id, winrateInfo);
 		return {
 			...stat,
 			warbandStats: !warbandStatInfo
@@ -48,7 +47,6 @@ export const loadStats = async (mysql, mysqlBgs): Promise<BgsGlobalStats> => {
 						})),
 		} as BgsGlobalHeroStat;
 	});
-	// console.log('hero stats with warbnd stats', heroStatsWithWarband);
 
 	const result = {
 		lastUpdateDate: formatDate(new Date()),
