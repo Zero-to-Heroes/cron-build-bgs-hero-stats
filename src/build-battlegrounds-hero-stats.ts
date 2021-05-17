@@ -18,8 +18,8 @@ export default async (event): Promise<any> => {
 	const mysqlBgs = await getConnectionBgs();
 
 	const lastBattlegroundsPatch = await getLastBattlegroundsPatch();
-	await updateAggregatedStats(mysqlBgs, mysql, lastBattlegroundsPatch);
 
+	await updateAggregatedStats(mysqlBgs, mysql, lastBattlegroundsPatch);
 	await updateLastPeriodStats(mysqlBgs, mysql, lastBattlegroundsPatch);
 
 	const stats = await loadStats(mysql, mysqlBgs);
