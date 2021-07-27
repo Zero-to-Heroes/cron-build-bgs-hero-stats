@@ -1,5 +1,4 @@
-import { AllCardsService } from '@firestone-hs/reference-data';
-import { ReferenceCard } from '@firestone-hs/reference-data/lib/models/reference-cards/reference-card';
+import { AllCardsService, ReferenceCard } from '@firestone-hs/reference-data';
 import fetch, { RequestInfo } from 'node-fetch';
 
 function partitionArray<T>(array: readonly T[], partitionSize: number): readonly T[][] {
@@ -60,3 +59,32 @@ export const getCardFromCardId = (cardId: number | string, cards: AllCardsServic
 };
 
 export { partitionArray, http, sleep };
+
+export const normalizeHeroCardId = (heroCardId: string, allCards: AllCardsService = null): string => {
+	if (!heroCardId) {
+		return heroCardId;
+	}
+
+	if (allCards) {
+		const heroCard = allCards.getCard(heroCardId);
+		if (!!heroCard?.battlegroundsHeroParentDbfId) {
+			const parentCard = allCards.getCardFromDbfId(heroCard.battlegroundsHeroParentDbfId);
+			if (!!parentCard) {
+				return parentCard.id;
+			}
+		}
+	}
+	// Fallback to regex
+	const bgHeroSkinMatch = heroCardId.match(/(.*)_SKIN_.*/);
+	console.debug('normalizing', heroCardId, bgHeroSkinMatch);
+	if (bgHeroSkinMatch) {
+		return bgHeroSkinMatch[1];
+	}
+
+	switch (heroCardId) {
+		case 'TB_BaconShop_HERO_59t':
+			return 'TB_BaconShop_HERO_59';
+		default:
+			return heroCardId;
+	}
+};

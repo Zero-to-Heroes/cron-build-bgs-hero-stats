@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
+import { AllCardsService } from '@firestone-hs/reference-data';
 import { ServerlessMysql } from 'serverless-mysql';
 import { gzipSync } from 'zlib';
 import { BgsGlobalHeroStat, BgsHeroTier } from './bgs-global-stats';
@@ -6,21 +7,23 @@ import { getConnection as getConnectionStats } from './db/rds';
 import { getConnection as getConnectionBgs } from './db/rds-bgs';
 import { S3 } from './db/s3';
 import { loadStats } from './retrieve-bgs-global-stats';
-import { http } from './utils/util-functions';
+import { http, normalizeHeroCardId } from './utils/util-functions';
 
 const s3 = new S3();
+const allCards = new AllCardsService();
 
 // This example demonstrates a NodeJS 8.10 async handler[1], however of course you could use
 // the more traditional callback-style handler.
 // [1]: https://aws.amazon.com/blogs/compute/node-js-8-10-runtime-now-available-in-aws-lambda/
 export default async (event): Promise<any> => {
+	await allCards.initializeCardsDb();
+	const lastBattlegroundsPatch = await getLastBattlegroundsPatch();
+
 	const mysql = await getConnectionStats();
 	const mysqlBgs = await getConnectionBgs();
 
-	const lastBattlegroundsPatch = await getLastBattlegroundsPatch();
-
-	await updateAggregatedStats(mysqlBgs, mysql, lastBattlegroundsPatch);
-	await updateLastPeriodStats(mysqlBgs, mysql, lastBattlegroundsPatch);
+	await updateAggregatedStats(mysqlBgs, mysql, lastBattlegroundsPatch, allCards);
+	await updateLastPeriodStats(mysqlBgs, mysql, lastBattlegroundsPatch, allCards);
 
 	const stats = await loadStats(mysql, mysqlBgs);
 	const stringResults = JSON.stringify(stats);
@@ -45,19 +48,29 @@ const getLastBattlegroundsPatch = async (): Promise<number> => {
 	return structuredPatch.currentBattlegroundsMetaPatch;
 };
 
-const updateAggregatedStats = async (mysqlBgs: ServerlessMysql, mysqlStats: ServerlessMysql, buildNumber: number) => {
+const updateAggregatedStats = async (
+	mysqlBgs: ServerlessMysql,
+	mysqlStats: ServerlessMysql,
+	buildNumber: number,
+	allCards: AllCardsService,
+) => {
 	// This won't be fully accurate, as not all update will be installed simulatenously, but it's good enough
 	const now = Date.now();
 	const earliestStartDate = new Date(now - 10 * 24 * 60 * 60 * 1000).toISOString();
-	await updateStats(mysqlBgs, mysqlStats, earliestStartDate, buildNumber, false);
+	await updateStats(mysqlBgs, mysqlStats, earliestStartDate, buildNumber, false, allCards);
 };
 
 //  TODO: remove this lastperiod stuff, add a new column with the last update Date, and do a query on that last update date
-const updateLastPeriodStats = async (mysqlBgs: ServerlessMysql, mysqlStats: ServerlessMysql, buildNumber: number) => {
+const updateLastPeriodStats = async (
+	mysqlBgs: ServerlessMysql,
+	mysqlStats: ServerlessMysql,
+	buildNumber: number,
+	allCards: AllCardsService,
+) => {
 	// Get all the reviews from the last day
 	const now = Date.now();
 	const earliestStartDate = new Date(now - 24 * 60 * 60 * 1000).toISOString();
-	await updateStats(mysqlBgs, mysqlStats, earliestStartDate, buildNumber, true);
+	await updateStats(mysqlBgs, mysqlStats, earliestStartDate, buildNumber, true, allCards);
 };
 
 const updateStats = async (
@@ -66,6 +79,7 @@ const updateStats = async (
 	creationDate: string,
 	buildNumber: number,
 	insertCreationDate: boolean,
+	allCards: AllCardsService,
 ) => {
 	const allHeroesQuery = `
 		SELECT distinct playerCardId
@@ -77,8 +91,8 @@ const updateStats = async (
 	`;
 	const allHeroesResult: readonly any[] = await mysqlStats.query(allHeroesQuery);
 	const allHeroes: readonly string[] = allHeroesResult
-		.map(result => result.playerCardId)
-		.filter(playerCardId => playerCardId !== 'TB_BaconShop_HERO_59t');
+		.filter(playerCardId => playerCardId !== 'TB_BaconShop_HERO_59t')
+		.map(result => normalizeHeroCardId(result.playerCardId, allCards));
 
 	const heroStatsQuery = `
 		SELECT playerCardId, additionalResult, count(*) as count, max(creationDate) as lastPlayedDate
@@ -91,12 +105,13 @@ const updateStats = async (
 		GROUP BY playerCardId, additionalResult
 	`;
 	const heroStatsResults: readonly any[] = ((await mysqlStats.query(heroStatsQuery)) as any[])
+		.filter(result => result.playerCardId !== 'TB_BaconShop_HERO_59t')
 		.map(result => ({
 			...result,
+			playerCardId: normalizeHeroCardId(result.playerCardId, allCards),
 			additionalResult: parseInt(result.additionalResult),
 		}))
-		.filter(result => result.additionalResult > 0)
-		.filter(result => result.playerCardId !== 'TB_BaconShop_HERO_59t');
+		.filter(result => result.additionalResult > 0);
 
 	const stats: BgsGlobalHeroStat[] = allHeroes.map(heroCardId => buildHeroInfo(heroCardId, heroStatsResults));
 
