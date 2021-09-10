@@ -1,6 +1,6 @@
 {
 	"name": "@firestone-hs/bgs-global-stats",
-	"version": "1.0.11",
+	"version": "1.0.13",
 	"description": "",
 	"scripts": {
 		"lint": "eslint --color --fix --ext .ts .",
@@ -18,8 +18,8 @@
 	"author": "",
 	"license": "MIT",
 	"private": false,
-	"main": "dist/build-battlegrounds-hero-stats.js",
-	"types": "dist/build-battlegrounds-hero-stats.d.ts",
+	"main": "dist/bgs-global-stats.js",
+	"types": "dist/bgs-global-stats.d.ts",
 	"files": [
 		"dist/**/*"
 	],

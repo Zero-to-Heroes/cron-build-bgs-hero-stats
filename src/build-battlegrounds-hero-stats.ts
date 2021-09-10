@@ -3,6 +3,7 @@ import { AllCardsService } from '@firestone-hs/reference-data';
 import { ServerlessMysql } from 'serverless-mysql';
 import { gzipSync } from 'zlib';
 import { BgsGlobalHeroStat, BgsHeroTier } from './bgs-global-stats';
+import { handleNewStats } from './build-battlegrounds-hero-stats-new';
 import { getConnection as getConnectionStats } from './db/rds';
 import { getConnection as getConnectionBgs } from './db/rds-bgs';
 import { S3 } from './db/s3';
@@ -38,6 +39,8 @@ export default async (event): Promise<any> => {
 
 	await mysqlBgs.end();
 	await mysql.end();
+
+	await handleNewStats();
 
 	return { statusCode: 200, body: null };
 };

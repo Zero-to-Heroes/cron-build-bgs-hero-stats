@@ -10,9 +10,9 @@ Resources:
         Properties:
             Handler: build-battlegrounds-hero-stats.default
             Runtime: nodejs10.x
-            Timeout: 180
+            Timeout: 850
             CodeUri: ./dist/build-battlegrounds-hero-stats
-            MemorySize: 256
+            MemorySize: 1024
             # https://stackoverflow.com/questions/39144688/aws-lambda-invoke-not-calling-another-lambda-function-node-js
             # VpcConfig:
             #     SecurityGroupIds:
