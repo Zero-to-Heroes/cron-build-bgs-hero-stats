@@ -24,38 +24,6 @@ export const handleNewStats = async () => {
 
 	const rows: readonly InternalBgsRow[] = await loadRows(mysql, lastPatch);
 	const mmrPercentiles: readonly MmrPercentile[] = buildMmrPercentiles(rows);
-	// const stats: BgsGlobalStats2 = {
-	// 	lastUpdateDate: formatDate(new Date()),
-	// 	mmrPercentiles: mmrPercentiles,
-	// 	heroStats: buildHeroes(rows, lastPatch, mmrPercentiles),
-	// };
-	// const stringResults = JSON.stringify(stats);
-	// const gzippedResults = gzipSync(stringResults);
-	// await s3.writeFile(
-	// 	gzippedResults,
-	// 	'static.zerotoheroes.com',
-	// 	'api/bgs-global-stats.gz.json',
-	// 	'application/json',
-	// 	'gzip',
-	// );
-
-	// We also build a lighter version without the tribes, that will be loaded on
-	// the app's startup
-	// The more complex version will be queried on demand for specific filters
-	// const statsAllTribes: BgsGlobalStats2 = {
-	// 	lastUpdateDate: formatDate(new Date()),
-	// 	mmrPercentiles: mmrPercentiles,
-	// 	heroStats: buildHeroes(rows, lastPatch, mmrPercentiles, null),
-	// };
-	// const stringResultsLight = JSON.stringify(statsAllTribes);
-	// const gzippedResultsAllTribes = gzipSync(stringResultsLight);
-	// await s3.writeFile(
-	// 	gzippedResultsAllTribes,
-	// 	'static.zerotoheroes.com',
-	// 	'api/bgs/bgs-global-stats-all-tribes.gz.json',
-	// 	'application/json',
-	// 	'gzip',
-	// );
 
 	// A basic approach could be to generate all files for all tribe combinations. That way,
 	// the app will only query static files with all the info for the specific tribe combination
@@ -63,6 +31,7 @@ export const handleNewStats = async () => {
 	console.log('all tribes', allTribes);
 
 	const tribePermutations = [null, ...combine(allTribes, 5)];
+	// const tribePermutations = [null];
 	console.log('tribe permutations, should be 56, because 8 tribes', tribePermutations.length);
 	console.log('tribe permutations', tribePermutations);
 	for (const tribes of tribePermutations) {
@@ -158,8 +127,6 @@ const buildHeroesForMmr = (
 	const rowsWithTribes = !!tribesStr
 		? rows.filter(row => !!row.tribes).filter(row => row.tribes === tribesStr)
 		: rows;
-	// console.debug('rowsWithTribes', rowsWithTribes.length, tribesStr, rowsWithTribes[0].tribes, rows[0].tribes);
-
 	const allTimeHeroes = buildHeroStats(rowsWithTribes, 'all-time', tribesStr);
 	const lastPatchHeroes = buildHeroStats(
 		rowsWithTribes.filter(
@@ -201,10 +168,6 @@ const buildHeroStats = (
 			date: period,
 			cardId: ref.heroCardId,
 			totalMatches: groupedRows.length,
-			// tribes:
-			// 	!!ref.tribes?.length && !!tribesStr
-			// 		? (ref.tribes.split(',').map(tribe => +tribe as Race) as readonly Race[])
-			// 		: null,
 			placementDistribution: placementDistribution,
 			combatWinrate: combatWinrate,
 			warbandStats: warbandStats,
@@ -227,7 +190,7 @@ const buildWarbandStats = (
 		}
 
 		for (const turnInfo of parsed) {
-			if (turnInfo.turn === 0) {
+			if (turnInfo.turn === 0 || turnInfo.totalStats == null) {
 				continue;
 			}
 			const existingInfo = data['' + turnInfo.turn] ?? { dataPoints: 0, totalStats: 0 };
@@ -248,6 +211,9 @@ const buildWarbandStats = (
 const buildCombatWinrate = (
 	rows: readonly InternalBgsRow[],
 ): readonly { turn: number; dataPoints: number; totalWinrate: number }[] => {
+	const ref = rows[0];
+	const debug = ref.heroCardId === 'BG21_HERO_000';
+
 	const data: { [turn: string]: { dataPoints: number; totalWinrate: number } } = {};
 	for (const row of rows) {
 		// console.log('building combatWinrate', row);
@@ -261,23 +227,45 @@ const buildCombatWinrate = (
 			continue;
 		}
 
+		if (debug) {
+			// console.log('handling combat winrate', parsed);
+		}
+
 		for (const turnInfo of parsed) {
-			if (turnInfo.turn === 0) {
+			if (turnInfo.turn === 0 || turnInfo.winrate == null) {
 				continue;
 			}
+			if (debug) {
+				// console.log('\t turnInfo', turnInfo);
+			}
 			const existingInfo = data['' + turnInfo.turn] ?? { dataPoints: 0, totalWinrate: 0 };
+			if (debug) {
+				// console.log('\t existingInfo', existingInfo);
+			}
 			existingInfo.dataPoints = existingInfo.dataPoints + 1;
 			existingInfo.totalWinrate = existingInfo.totalWinrate + Math.round(turnInfo.winrate);
+			if (debug) {
+				// console.log('\t existingInfo after', existingInfo);
+			}
 			data['' + turnInfo.turn] = existingInfo;
+			if (debug) {
+				// console.log('\t data', data);
+			}
 		}
 		// console.log('existingInfo', existingInfo);
 	}
 
+	if (debug) {
+		// console.log('\t data', data);
+	}
 	const result: { turn: number; dataPoints: number; totalWinrate: number }[] = Object.keys(data).map(turn => ({
 		turn: +turn,
 		dataPoints: data[turn].dataPoints,
 		totalWinrate: data[turn].totalWinrate,
 	}));
+	if (debug) {
+		// console.log('\t result', result);
+	}
 	return result;
 };
 
@@ -318,8 +306,8 @@ const buildMmrPercentiles = (rows: readonly InternalBgsRow[]): readonly MmrPerce
 	const median = sortedMmrs[Math.floor(sortedMmrs.length / 2)];
 	const top25 = sortedMmrs[Math.floor((sortedMmrs.length / 4) * 3)];
 	const top10 = sortedMmrs[Math.floor((sortedMmrs.length / 10) * 9)];
-	const top1 = sortedMmrs[Math.floor((sortedMmrs.length / 100) * 99)];
-	console.debug('percentiles', median, top25, top10, top1);
+	// const top1 = sortedMmrs[Math.floor((sortedMmrs.length / 100) * 99)];
+	// console.debug('percentiles', median, top25, top10, top1);
 	return [
 		{
 			percentile: 100,
@@ -337,10 +325,10 @@ const buildMmrPercentiles = (rows: readonly InternalBgsRow[]): readonly MmrPerce
 			percentile: 10,
 			mmr: top10,
 		},
-		{
-			percentile: 1,
-			mmr: top1,
-		},
+		// {
+		// 	percentile: 1,
+		// 	mmr: top1,
+		// },
 	];
 };
 
