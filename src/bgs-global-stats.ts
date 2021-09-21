@@ -27,6 +27,7 @@ export class BgsGlobalStats2 {
 	readonly lastUpdateDate: string;
 	readonly mmrPercentiles: readonly MmrPercentile[];
 	readonly heroStats: readonly BgsGlobalHeroStat2[];
+	readonly allTribes: readonly Race[];
 }
 
 export class BgsGlobalHeroStat2 {

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
-import { AllCardsService, Race } from '@firestone-hs/reference-data';
+import { AllCardsService, CardIds, Race } from '@firestone-hs/reference-data';
 import { ServerlessMysql } from 'serverless-mysql';
 import { gzipSync } from 'zlib';
 import { BgsGlobalHeroStat2, BgsGlobalStats2, MmrPercentile } from './bgs-global-stats';
@@ -41,6 +41,7 @@ export const handleNewStats = async () => {
 			lastUpdateDate: formatDate(new Date()),
 			mmrPercentiles: mmrPercentiles,
 			heroStats: buildHeroes(rows, lastPatch, mmrPercentiles, tribesStr),
+			allTribes: allTribes,
 		};
 		const stringResults = JSON.stringify(statsForTribes);
 		const gzippedResults = gzipSync(stringResults);
@@ -291,7 +292,9 @@ const loadRows = async (mysql: ServerlessMysql, patch: PatchInfo): Promise<reado
 	console.log('running query', query);
 	const rows: readonly InternalBgsRow[] = await mysql.query(query);
 	console.log('rows', rows?.length, rows[0]);
-	return rows.filter(row => row.heroCardId.startsWith('TB_BaconShop_') || row.heroCardId.startsWith('BG'));
+	return rows
+		.filter(row => row.heroCardId.startsWith('TB_BaconShop_') || row.heroCardId.startsWith('BG'))
+		.filter(row => row.heroCardId !== CardIds.ArannaStarseeker_ArannaUnleashedTokenBattlegrounds);
 };
 
 const getLastBattlegroundsPatch = async (): Promise<PatchInfo> => {
