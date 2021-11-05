@@ -76,7 +76,7 @@ export const normalizeHeroCardId = (heroCardId: string, allCards: AllCardsServic
 	}
 	// Fallback to regex
 	const bgHeroSkinMatch = heroCardId.match(/(.*)_SKIN_.*/);
-	console.debug('normalizing', heroCardId, bgHeroSkinMatch);
+	// console.debug('normalizing', heroCardId, bgHeroSkinMatch);
 	if (bgHeroSkinMatch) {
 		return bgHeroSkinMatch[1];
 	}

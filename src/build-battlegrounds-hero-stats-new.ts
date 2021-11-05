@@ -18,7 +18,7 @@ export default async (event): Promise<any> => {
 };
 
 export const handleNewStats = async () => {
-	await allCards.initializeCardsDb();
+	await allCards.initializeCardsDb('20211104');
 	const lastPatch = await getLastBattlegroundsPatch();
 	const mysql = await getConnectionStats();
 
@@ -222,9 +222,15 @@ const buildCombatWinrate = (
 			continue;
 		}
 
-		const parsed: readonly { turn: number; winrate: number }[] = JSON.parse(row.combatWinrate);
-		// console.log('parsed', parsed);
-		if (!parsed?.length) {
+		let parsed: readonly { turn: number; winrate: number }[] = null;
+		try {
+			parsed = JSON.parse(row.combatWinrate);
+			// console.log('parsed', parsed);
+			if (!parsed?.length) {
+				continue;
+			}
+		} catch (e) {
+			console.error('Could not parse combat winrate', row.id, e);
 			continue;
 		}
 
