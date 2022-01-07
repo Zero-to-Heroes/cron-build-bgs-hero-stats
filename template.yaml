@@ -8,10 +8,10 @@ Resources:
     BuildBgsHeroStatsFunction:
         Type: AWS::Serverless::Function
         Properties:
-            Handler: build-battlegrounds-hero-stats.default
+            Handler: build-battlegrounds-hero-stats-new.default
             Runtime: nodejs10.x
             Timeout: 850
-            CodeUri: ./dist/build-battlegrounds-hero-stats
+            CodeUri: ./dist/build-battlegrounds-hero-stats-new
             MemorySize: 1024
             # https://stackoverflow.com/questions/39144688/aws-lambda-invoke-not-calling-another-lambda-function-node-js
             # VpcConfig:

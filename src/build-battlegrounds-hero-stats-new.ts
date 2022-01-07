@@ -131,7 +131,9 @@ const buildHeroesForMmr = (
 	const allTimeHeroes = buildHeroStats(rowsWithTribes, 'all-time', tribesStr);
 	const lastPatchHeroes = buildHeroStats(
 		rowsWithTribes.filter(
-			row => row.buildNumber >= lastPatch.number && row.creationDate > new Date(lastPatch.date),
+			row =>
+				row.buildNumber >= lastPatch.number ||
+				row.creationDate > new Date(new Date(lastPatch.date).getTime() + 24 * 60 * 60 * 1000),
 		),
 		'last-patch',
 		tribesStr,
