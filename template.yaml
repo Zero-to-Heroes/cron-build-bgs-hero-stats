@@ -9,10 +9,10 @@ Resources:
         Type: AWS::Serverless::Function
         Properties:
             Handler: build-battlegrounds-hero-stats-new.default
-            Runtime: nodejs10.x
+            Runtime: nodejs12.x
             Timeout: 850
             CodeUri: ./dist/build-battlegrounds-hero-stats-new
-            MemorySize: 1024
+            MemorySize: 2048
             # https://stackoverflow.com/questions/39144688/aws-lambda-invoke-not-calling-another-lambda-function-node-js
             # VpcConfig:
             #     SecurityGroupIds:
@@ -34,4 +34,4 @@ Resources:
                 LastPeriodTrigger:
                     Type: Schedule
                     Properties:
-                        Schedule: cron(0 4 * * ? *) # Triggers every day at 4 AM. Make sure it runs after the MR job
+                        Schedule: cron(0 4 * * ? *) # Triggers every day at 4 AM
