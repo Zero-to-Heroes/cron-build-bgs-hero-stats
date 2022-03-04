@@ -193,7 +193,11 @@ const buildWarbandStats = (
 		}
 
 		for (const turnInfo of parsed) {
-			if (turnInfo.turn === 0 || turnInfo.totalStats == null) {
+			if (turnInfo.turn === 0 || turnInfo.totalStats == null || isNaN(turnInfo.totalStats)) {
+				continue;
+			}
+			// To avoid polluting the stats with big Tarecgosa outliers
+			if (turnInfo.totalStats > 20000) {
 				continue;
 			}
 			const existingInfo = data['' + turnInfo.turn] ?? { dataPoints: 0, totalStats: 0 };
