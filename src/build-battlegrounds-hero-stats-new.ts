@@ -182,7 +182,10 @@ const buildWarbandStats = (
 	rows: readonly InternalBgsRow[],
 ): readonly { turn: number; dataPoints: number; totalStats: number }[] => {
 	const data: { [turn: string]: { dataPoints: number; totalStats: number } } = {};
-	for (const row of rows) {
+	// Before that, there was an issue with disconnects, where the first turn after the
+	// reconnect would be turn 0, leading to an inflation of early turn stats
+	const validRows = rows.filter(row => row.id > 5348374);
+	for (const row of validRows) {
 		if (!row.warbandStats?.length) {
 			continue;
 		}
