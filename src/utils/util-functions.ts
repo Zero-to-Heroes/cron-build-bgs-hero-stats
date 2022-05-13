@@ -1,4 +1,4 @@
-import { AllCardsService, ReferenceCard } from '@firestone-hs/reference-data';
+import { AllCardsService, CardIds, ReferenceCard } from '@firestone-hs/reference-data';
 import fetch, { RequestInfo } from 'node-fetch';
 
 function partitionArray<T>(array: readonly T[], partitionSize: number): readonly T[][] {
@@ -84,6 +84,8 @@ export const normalizeHeroCardId = (heroCardId: string, allCards: AllCardsServic
 	switch (heroCardId) {
 		case 'TB_BaconShop_HERO_59t':
 			return 'TB_BaconShop_HERO_59';
+		case CardIds.QueenAzshara_NagaQueenAzsharaToken:
+			return CardIds.QueenAzshara3;
 		default:
 			return heroCardId;
 	}
