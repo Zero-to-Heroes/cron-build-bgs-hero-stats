@@ -32,10 +32,11 @@ export const handleNewStats = async () => {
 
 	const tribePermutations = [null, ...combine(allTribes, 5)];
 	// const tribePermutations = [null];
-	console.log('tribe permutations, should be 56, because 8 tribes', tribePermutations.length);
+	console.log('tribe permutations, should be 127 (126 + 1), because 9 tribes', tribePermutations.length);
 	console.log('tribe permutations', tribePermutations);
+	let index = 0;
 	for (const tribes of tribePermutations) {
-		console.log('handling tribes', tribes);
+		console.log('handling tribes', index++, tribes);
 		const tribesStr = !!tribes?.length ? tribes.join(',') : null;
 		const statsForTribes: BgsGlobalStats2 = {
 			lastUpdateDate: formatDate(new Date()),
@@ -43,6 +44,7 @@ export const handleNewStats = async () => {
 			heroStats: buildHeroes(rows, lastPatch, mmrPercentiles, tribesStr),
 			allTribes: allTribes,
 		};
+		console.log('\tstats for tribes', tribes);
 		const stringResults = JSON.stringify(statsForTribes);
 		const gzippedResults = gzipSync(stringResults);
 		await s3.writeFile(
@@ -128,6 +130,7 @@ const buildHeroesForMmr = (
 	const rowsWithTribes = !!tribesStr
 		? rows.filter(row => !!row.tribes).filter(row => row.tribes === tribesStr)
 		: rows;
+	console.log('\tbuilt heroes for mmr', rowsWithTribes.length);
 	const allTimeHeroes = buildHeroStats(rowsWithTribes, 'all-time', tribesStr);
 	const lastPatchHeroes = buildHeroStats(
 		rowsWithTribes.filter(
@@ -148,6 +151,7 @@ const buildHeroesForMmr = (
 		'past-seven',
 		tribesStr,
 	);
+	console.log('\tbuilt heroes for mmr', tribesStr);
 	return [...allTimeHeroes, ...lastPatchHeroes, ...threeDaysHeroes, ...sevenDaysHeroes];
 };
 
