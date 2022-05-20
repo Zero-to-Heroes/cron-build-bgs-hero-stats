@@ -5,7 +5,7 @@ import { gzipSync } from 'zlib';
 import { BgsGlobalHeroStat2, BgsGlobalStats2, MmrPercentile } from './bgs-global-stats';
 import { getConnection as getConnectionStats } from './db/rds';
 import { S3 } from './db/s3';
-import { formatDate, groupByFunction, http } from './utils/util-functions';
+import { formatDate, groupByFunction, http, normalizeHeroCardId } from './utils/util-functions';
 
 const s3 = new S3();
 const allCards = new AllCardsService();
@@ -313,7 +313,15 @@ const loadRows = async (mysql: ServerlessMysql, patch: PatchInfo): Promise<reado
 	console.log('rows', rows?.length, rows[0]);
 	return rows
 		.filter(row => row.heroCardId.startsWith('TB_BaconShop_') || row.heroCardId.startsWith('BG'))
-		.filter(row => row.heroCardId !== CardIds.ArannaStarseeker_ArannaUnleashedTokenBattlegrounds);
+		.filter(
+			row =>
+				row.heroCardId !== CardIds.ArannaStarseeker_ArannaUnleashedTokenBattlegrounds &&
+				row.heroCardId !== CardIds.QueenAzshara_NagaQueenAzsharaToken,
+		)
+		.map(row => ({
+			...row,
+			heroCardId: normalizeHeroCardId(row.heroCardId),
+		}));
 };
 
 const getLastBattlegroundsPatch = async (): Promise<PatchInfo> => {
