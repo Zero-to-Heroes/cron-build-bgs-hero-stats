@@ -33,10 +33,9 @@ export const handleNewStats = async () => {
 	const tribePermutations = [null, ...combine(allTribes, 5)];
 	// const tribePermutations = [null];
 	console.log('tribe permutations, should be 127 (126 + 1), because 9 tribes', tribePermutations.length);
-	console.log('tribe permutations', tribePermutations);
-	let index = 0;
+	// console.log('tribe permutations', tribePermutations);
 	for (const tribes of tribePermutations) {
-		console.log('handling tribes', index++, tribes);
+		// console.log('handling tribes', index++, tribes);
 		const tribesStr = !!tribes?.length ? tribes.join(',') : null;
 		const statsForTribes: BgsGlobalStats2 = {
 			lastUpdateDate: formatDate(new Date()),
@@ -44,7 +43,7 @@ export const handleNewStats = async () => {
 			heroStats: buildHeroes(rows, lastPatch, mmrPercentiles, tribesStr),
 			allTribes: allTribes,
 		};
-		console.log('\tstats for tribes', tribes);
+		// console.log('\tstats for tribes', tribes, );
 		const stringResults = JSON.stringify(statsForTribes);
 		const gzippedResults = gzipSync(stringResults);
 		await s3.writeFile(
@@ -103,14 +102,15 @@ const buildHeroes = (
 	return mmrPercentiles
 		.map(
 			mmrPercentile =>
-				[mmrPercentile, rows.filter(row => row.rating >= mmrPercentile.mmr)] as [
-					MmrPercentile,
-					readonly InternalBgsRow[],
-				],
+				[
+					mmrPercentile,
+					// So that we also include rows where data collection failed
+					rows.filter(row => mmrPercentile.percentile === 100 || row.rating >= mmrPercentile.mmr),
+				] as [MmrPercentile, readonly InternalBgsRow[]],
 		)
 		.map(([mmr, rows]) => {
-			// console.log('building heroes for mme', mmr.percentile);
-			return buildHeroesForMmr(rows, lastPatch, tribesStr).map(stat => ({
+			// console.log('building heroes for mmr', mmr.percentile, rows.length);
+			return buildHeroesForMmr(rows, lastPatch, tribesStr, mmr).map(stat => ({
 				...stat,
 				mmrPercentile: mmr.percentile,
 			}));
@@ -126,32 +126,47 @@ const buildHeroesForMmr = (
 	rows: readonly InternalBgsRow[],
 	lastPatch: PatchInfo,
 	tribesStr: string,
+	mmr: MmrPercentile,
 ): readonly BgsGlobalHeroStat2[] => {
 	const rowsWithTribes = !!tribesStr
 		? rows.filter(row => !!row.tribes).filter(row => row.tribes === tribesStr)
 		: rows;
-	console.log('\tbuilt heroes for mmr', rowsWithTribes.length);
+	console.log(
+		'\tNumber of total rows matching tribes',
+		tribesStr,
+		mmr.percentile,
+		rowsWithTribes.length,
+		rows.length,
+	);
 	const allTimeHeroes = buildHeroStats(rowsWithTribes, 'all-time', tribesStr);
-	const lastPatchHeroes = buildHeroStats(
-		rowsWithTribes.filter(
-			row =>
-				row.buildNumber >= lastPatch.number ||
-				row.creationDate > new Date(new Date(lastPatch.date).getTime() + 24 * 60 * 60 * 1000),
-		),
-		'last-patch',
-		tribesStr,
+
+	const rowsForLastPatch = rowsWithTribes.filter(
+		row =>
+			row.buildNumber >= lastPatch.number ||
+			row.creationDate > new Date(new Date(lastPatch.date).getTime() + 24 * 60 * 60 * 1000),
 	);
-	const threeDaysHeroes = buildHeroStats(
-		rowsWithTribes.filter(row => row.creationDate >= new Date(new Date().getTime() - 3 * 24 * 60 * 60 * 1000)),
-		'past-three',
+	console.log(
+		'\tNumber of last patch rows matching tribes',
 		tribesStr,
+		mmr.percentile,
+		rowsForLastPatch.length,
+		lastPatch.number,
 	);
-	const sevenDaysHeroes = buildHeroStats(
-		rowsWithTribes.filter(row => row.creationDate >= new Date(new Date().getTime() - 7 * 24 * 60 * 60 * 1000)),
-		'past-seven',
-		tribesStr,
+	const lastPatchHeroes = buildHeroStats(rowsForLastPatch, 'last-patch', tribesStr);
+
+	const rowsForLastThree = rowsWithTribes.filter(
+		row => row.creationDate >= new Date(new Date().getTime() - 3 * 24 * 60 * 60 * 1000),
 	);
-	console.log('\tbuilt heroes for mmr', tribesStr);
+	console.log('\tNumber of last three rows matching tribes', tribesStr, mmr.percentile, rowsForLastThree.length);
+	const threeDaysHeroes = buildHeroStats(rowsForLastThree, 'past-three', tribesStr);
+
+	const rowsForLastSeven = rowsWithTribes.filter(
+		row => row.creationDate >= new Date(new Date().getTime() - 7 * 24 * 60 * 60 * 1000),
+	);
+	console.log('\tNumber of last seven rows matching tribes', tribesStr, mmr.percentile, rowsForLastSeven.length);
+	const sevenDaysHeroes = buildHeroStats(rowsForLastSeven, 'past-seven', tribesStr);
+
+	// console.log('\tbuilt heroes for mmr', tribesStr);
 	return [...allTimeHeroes, ...lastPatchHeroes, ...threeDaysHeroes, ...sevenDaysHeroes];
 };
 
