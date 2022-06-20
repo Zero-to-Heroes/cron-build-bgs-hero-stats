@@ -18,7 +18,7 @@ export default async (event): Promise<any> => {
 };
 
 export const handleNewStats = async () => {
-	await allCards.initializeCardsDb('20211104');
+	await allCards.initializeCardsDb();
 	const lastPatch = await getLastBattlegroundsPatch();
 	const mysql = await getConnectionStats();
 
