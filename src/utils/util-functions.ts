@@ -83,9 +83,9 @@ export const normalizeHeroCardId = (heroCardId: string, allCards: AllCardsServic
 
 	switch (heroCardId) {
 		case CardIds.ArannaStarseeker_ArannaUnleashedTokenBattlegrounds:
-			return CardIds.ArannaStarseeker2;
+			return CardIds.ArannaStarseekerBattlegrounds;
 		case CardIds.QueenAzshara_NagaQueenAzsharaToken:
-			return CardIds.QueenAzshara3;
+			return CardIds.QueenAzshara_BG22_HERO_007;
 		default:
 			return heroCardId;
 	}
