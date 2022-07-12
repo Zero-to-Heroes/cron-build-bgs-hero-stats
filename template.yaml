@@ -13,13 +13,6 @@ Resources:
             Timeout: 880
             CodeUri: ./dist/build-battlegrounds-hero-stats-new
             MemorySize: 3000
-            # https://stackoverflow.com/questions/39144688/aws-lambda-invoke-not-calling-another-lambda-function-node-js
-            # VpcConfig:
-            #     SecurityGroupIds:
-            #         - sg-0ed63616362bf1a30
-            #     SubnetIds:
-            #         - subnet-0b36da5c19637a351
-            #         - subnet-0b730ca9af74a95dd
             Policies:
                 - AWSLambdaVPCAccessExecutionRole
                 - AmazonSESFullAccess
@@ -35,3 +28,27 @@ Resources:
                     Type: Schedule
                     Properties:
                         Schedule: cron(0 4 * * ? *) # Triggers every day at 4 AM
+
+    BuildBgsHeroStatsSliceFunction:
+        Type: AWS::Serverless::Function
+        Properties:
+            Handler: build-bgs-stats-slices.default
+            Runtime: nodejs12.x
+            Timeout: 880
+            CodeUri: ./dist/build-bgs-stats-slices
+            MemorySize: 3000
+            Policies:
+                - AWSLambdaVPCAccessExecutionRole
+                - AmazonSESFullAccess
+                - SecretsManagerReadWrite
+                - AmazonSNSReadOnlyAccess
+                - AmazonS3FullAccess
+                # - arn:aws:iam::478062583808:policy/CloudWatchPolicyForLambda # See https://stackoverflow.com/questions/51166504/disable-cloudwatch-to-monitor-logs-for-lambda-function
+            Tags:
+                LambdaName: cron-build-bgs-hero-stats-slice
+            Events:
+                # Populate the info on the last hour
+                LastPeriodTrigger:
+                    Type: Schedule
+                    Properties:
+                        Schedule: cron(30 */4 * * ? *)

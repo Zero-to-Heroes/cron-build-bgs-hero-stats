@@ -1,11 +1,12 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
+import { groupByFunction } from '@firestone-hs/aws-lambda-utils';
 import { AllCardsService, CardIds, Race } from '@firestone-hs/reference-data';
 import { ServerlessMysql } from 'serverless-mysql';
 import { gzipSync } from 'zlib';
 import { BgsGlobalHeroStat2, BgsGlobalStats2, MmrPercentile } from './bgs-global-stats';
 import { getConnection as getConnectionStats } from './db/rds';
 import { S3 } from './db/s3';
-import { formatDate, groupByFunction, http, normalizeHeroCardId } from './utils/util-functions';
+import { formatDate, http, normalizeHeroCardId } from './utils/util-functions';
 
 const s3 = new S3();
 const allCards = new AllCardsService();

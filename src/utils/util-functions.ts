@@ -31,13 +31,6 @@ async function sleep(ms) {
 	return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-export const groupByFunction = (keyExtractor: (obj: object | string) => string) => array =>
-	array.reduce((objectsByKeyValue, obj) => {
-		const value = keyExtractor(obj);
-		objectsByKeyValue[value] = (objectsByKeyValue[value] || []).concat(obj);
-		return objectsByKeyValue;
-	}, {});
-
 export const toCreationDate = (today: Date): string => {
 	return `${today
 		.toISOString()
@@ -89,4 +82,30 @@ export const normalizeHeroCardId = (heroCardId: string, allCards: AllCardsServic
 		default:
 			return heroCardId;
 	}
+};
+
+export const combine = <T>(input: readonly T[], chooseN: number): T[][] => {
+	const finalResult: T[][] = [];
+
+	const intermediateResult = [];
+	intermediateResult.length = chooseN;
+	const combineInternal = <T>(input: readonly T[], chooseN: number, start = 0): void => {
+		if (chooseN === 0) {
+			finalResult.push([...intermediateResult].sort());
+			return;
+		}
+		for (let i = start; i <= input.length - chooseN; i++) {
+			intermediateResult[intermediateResult.length - chooseN] = input[i];
+			if (
+				intermediateResult.filter(e => !!e).length !== [...new Set(intermediateResult.filter(e => !!e))].length
+			) {
+				console.warn('duplicates', intermediateResult, i, start, chooseN);
+				throw new Error();
+			}
+			combineInternal(input, chooseN - 1, i + 1);
+		}
+	};
+	combineInternal(input, chooseN, 0);
+
+	return finalResult;
 };
