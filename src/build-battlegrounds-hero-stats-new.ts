@@ -323,6 +323,8 @@ const loadRows = async (mysql: ServerlessMysql, patch: PatchInfo): Promise<reado
 	const query = `
 		SELECT * FROM bgs_run_stats
 		WHERE creationDate > DATE_SUB(NOW(), INTERVAL 30 DAY)
+		ORDER BY id DESC
+		LIMIT 1000000
 	`;
 	console.log('running query', query);
 	const rows: readonly InternalBgsRow[] = await mysql.query(query);
