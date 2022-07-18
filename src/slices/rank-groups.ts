@@ -1,11 +1,12 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
 import { MmrPercentile } from '../bgs-global-stats';
 import { InternalBgsRow, RankGroup, Slice } from '../internal-model';
+import { getMax } from '../utils/util-functions';
 
 export const buildAllRankGroups = (slices: readonly Slice[], rows: readonly InternalBgsRow[]): readonly RankGroup[] => {
-	const rowMmrs = rows.map(row => row.rating) ?? [];
-	const slicesMmr = slices?.flatMap(slice => slice.allMmr);
-	const highestMmr = Math.max(...rowMmrs, ...slicesMmr);
+	const highestRowMmr = getMax(rows.map(row => row.rating ?? 0));
+	const highestSlicesMmrs = slices.map(slice => getMax(slice.allMmr));
+	const highestMmr = getMax([highestRowMmr, ...highestSlicesMmrs]);
 	return buildDefaultRankGroups(highestMmr);
 };
 

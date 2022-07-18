@@ -25,7 +25,7 @@ export default async (event, context): Promise<any> => {
 	await allCards.initializeCardsDb();
 
 	const existingSlices: readonly Slice[] = await loadExistingSlices();
-	logger.log('existingSlices', existingSlices);
+	logger.log('existingSlices', existingSlices.length, existingSlices[0]);
 	const lastDataTimestamp: number = !existingSlices?.length
 		? null
 		: Math.max(...existingSlices.map(data => data.lastUpdateDate.getTime()));
@@ -73,7 +73,7 @@ const buildFinalStats = async (allSlices: readonly Slice[], allTribes: readonly 
 		logger.log('building stats for time period', timePeriod);
 		const tribePermutations = [null, ...combine(allTribes, 5)];
 		for (const tribes of tribePermutations) {
-			logger.log('\thandling tribes', tribes);
+			// logger.log('\thandling tribes', tribes);
 			const relevantSlices = allSlices.filter(slice => isValidDate(slice.lastUpdateDate, timePeriod, lastPatch));
 			const mmrPercentiles = buildMmrPercentiles(relevantSlices);
 			const stats: InternalBgsGlobalStats = buildStatsForTribes(
@@ -161,7 +161,7 @@ const loadRows = async (lastDataDate: Date): Promise<readonly InternalBgsRow[]> 
 
 const loadExistingSlices = async (): Promise<readonly Slice[]> => {
 	const files: ObjectList = await s3.loadAllFileKeys(S3_BUCKET_NAME, S3_FOLDER_SLICE);
-	logger.log('fileKeys', files);
+	logger.log('fileKeys', files.length, files[0]);
 	const allContent = await Promise.all(
 		files.filter(file => !file.Key.endsWith('/')).map(file => s3.readGzipContent(S3_BUCKET_NAME, file.Key, 1)),
 	);

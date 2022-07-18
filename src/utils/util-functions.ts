@@ -109,3 +109,16 @@ export const combine = <T>(input: readonly T[], chooseN: number): T[][] => {
 
 	return finalResult;
 };
+
+export const getMax = (array: readonly number[]): number => {
+	let len = array.length;
+	let max = -Infinity;
+
+	while (len--) {
+		if (array[len] == null) {
+			continue;
+		}
+		max = array[len] > max ? array[len] : max;
+	}
+	return max;
+};

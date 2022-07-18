@@ -16,7 +16,7 @@ export const buildNewSlice = (
 		lastUpdateDate: new Date(),
 		dataPoints: rows.length,
 		dataForTribes: dataForTribes,
-		allMmr: rows.map(row => row.rating),
+		allMmr: rows.map(row => row.rating).filter(rating => rating != null),
 	};
 };
 
