@@ -49,6 +49,7 @@ export default async (event, context): Promise<any> => {
 
 	const allTribes: readonly Race[] = extractAllTribes(rows);
 	const allRankGroups: readonly RankGroup[] = buildAllRankGroups(existingSlices, rows);
+	logger.log('allRankGroups', allRankGroups);
 	const newSlice = buildNewSlice(validRows, allRankGroups, allTribes);
 	logger.log('newSlice', newSlice);
 	await saveSingleSlice(newSlice);
@@ -81,13 +82,8 @@ const buildFinalStats = async (allSlices: readonly Slice[], allTribes: readonly 
 				tribes,
 				mmrPercentiles,
 				timePeriod,
+				allTribes,
 			);
-			// const mergedData: FinalBgsDataForTimePeriod = buildFinalStats(
-			// 	relevantSlices,
-			// 	mmrPercentiles,
-			// 	allTribes,
-			// 	timePeriod,
-			// );
 			await saveFinalFile(stats, tribes, timePeriod);
 		}
 	}

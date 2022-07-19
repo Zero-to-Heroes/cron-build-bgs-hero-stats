@@ -1,7 +1,7 @@
-import { groupByFunction } from '@firestone-hs/aws-lambda-utils';
+import { groupByFunction, logger } from '@firestone-hs/aws-lambda-utils';
 import { Race } from '@firestone-hs/reference-data';
 import { DataForMmr, DataForTribes, HeroStat, InternalBgsRow, RankGroup, Slice } from '../internal-model';
-import { combine } from '../utils/util-functions';
+import { combine, getMax } from '../utils/util-functions';
 
 export const buildNewSlice = (
 	rows: readonly InternalBgsRow[],
@@ -12,11 +12,20 @@ export const buildNewSlice = (
 	const dataForTribes: readonly DataForTribes[] = tribePermutations.map(permutation =>
 		buildDataForTribes(rows, permutation, ranks),
 	);
+	const groupedMmr = groupByFunction((row: InternalBgsRow) => 100 * Math.round(row.rating / 100))(
+		rows.filter(row => row.rating != null),
+	);
+	logger.log('groupedMmr', Object.keys(groupedMmr), groupedMmr);
 	return {
 		lastUpdateDate: new Date(),
 		dataPoints: rows.length,
 		dataForTribes: dataForTribes,
-		allMmr: rows.map(row => row.rating).filter(rating => rating != null),
+		highestMmr: getMax(rows.map(row => row.rating)),
+		mmrGroups: Object.keys(groupedMmr).map(mmrThreshold => ({
+			mmrThreshold: +mmrThreshold,
+			mmrRangeUp: 100,
+			quantity: groupedMmr[mmrThreshold].length,
+		})),
 	};
 };
 

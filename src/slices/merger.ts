@@ -4,34 +4,16 @@ import { BgsGlobalHeroStat2, MmrPercentile } from '../bgs-global-stats';
 import { DataForTribes, HeroStat, InternalBgsGlobalStats, Slice } from '../internal-model';
 import { formatDate } from '../utils/util-functions';
 
-// export const buildFinalStats = (
-// 	slices: readonly Slice[],
-// 	mmrPercentiles: readonly MmrPercentile[],
-// 	allTribes: readonly Race[],
-// 	timePeriod: 'all-time' | 'past-three' | 'past-seven' | 'last-patch',
-// ): FinalBgsDataForTimePeriod => {
-// 	const tribePermutations = [null, ...combine(allTribes, 5)];
-// 	const statsForTribes: readonly InternalBgsGlobalStats[] = tribePermutations
-// 		.map(permutation => buildStatsForTribes(slices, permutation, mmrPercentiles, timePeriod))
-// 		.map(stats => ({
-// 			...stats,
-// 			allTribes: allTribes,
-// 		}));
-// 	return {
-// 		statsForTribes: statsForTribes,
-// 	};
-// };
-
 export const buildStatsForTribes = (
 	slices: readonly Slice[],
 	tribes: readonly Race[],
 	mmrPercentiles: readonly MmrPercentile[],
 	timePeriod: 'all-time' | 'past-three' | 'past-seven' | 'last-patch',
+	allTribes: readonly Race[],
 ): InternalBgsGlobalStats => {
 	const relevantDataForTribes = slices
 		.flatMap(slice => slice.dataForTribes)
 		.filter(dataForTribes => dataForTribes.tribes?.join('-') == tribes?.join('-'));
-
 	const heroStats: readonly BgsGlobalHeroStat2[] = mmrPercentiles
 		.flatMap(mmr => buildStatsForMmr(relevantDataForTribes, mmr))
 		.map(stat => ({
@@ -41,7 +23,7 @@ export const buildStatsForTribes = (
 		}));
 	return {
 		lastUpdateDate: formatDate(new Date()),
-		allTribes: null, // Populated outside of the loop
+		allTribes: allTribes,
 		tribes: tribes,
 		timePeriod: timePeriod,
 		mmrPercentiles: mmrPercentiles,

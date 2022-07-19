@@ -17,7 +17,8 @@ export interface Slice {
 	readonly lastUpdateDate: Date;
 	readonly dataPoints: number;
 	readonly dataForTribes: readonly DataForTribes[];
-	readonly allMmr: readonly number[];
+	readonly highestMmr: number;
+	readonly mmrGroups: readonly RankGroup[];
 }
 
 export interface DataForTribes {
@@ -59,4 +60,5 @@ export interface InternalBgsGlobalStats extends BgsGlobalStats2 {
 export interface RankGroup {
 	readonly mmrThreshold: number;
 	readonly mmrRangeUp: number;
+	readonly quantity?: number;
 }
