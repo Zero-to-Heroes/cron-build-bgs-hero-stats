@@ -12,43 +12,20 @@ Resources:
             Runtime: nodejs12.x
             Timeout: 880
             CodeUri: ./dist/build-battlegrounds-hero-stats-new
-            MemorySize: 3000
+            MemorySize: 5000
             Policies:
                 - AWSLambdaVPCAccessExecutionRole
                 - AmazonSESFullAccess
                 - SecretsManagerReadWrite
                 - AmazonSNSReadOnlyAccess
                 - AmazonS3FullAccess
+                - AWSLambda_FullAccess
                 # - arn:aws:iam::478062583808:policy/CloudWatchPolicyForLambda # See https://stackoverflow.com/questions/51166504/disable-cloudwatch-to-monitor-logs-for-lambda-function
             Tags:
                 LambdaName: cron-build-bgs-hero-stats
-            Events:
-                # Populate the info on the last hour
-                LastPeriodTrigger:
-                    Type: Schedule
-                    Properties:
-                        Schedule: cron(0 4 * * ? *) # Triggers every day at 4 AM
-
-    BuildBgsHeroStatsSliceFunction:
-        Type: AWS::Serverless::Function
-        Properties:
-            Handler: build-bgs-stats-slices.default
-            Runtime: nodejs12.x
-            Timeout: 880
-            CodeUri: ./dist/build-bgs-stats-slices
-            MemorySize: 3000
-            Policies:
-                - AWSLambdaVPCAccessExecutionRole
-                - AmazonSESFullAccess
-                - SecretsManagerReadWrite
-                - AmazonSNSReadOnlyAccess
-                - AmazonS3FullAccess
-                # - arn:aws:iam::478062583808:policy/CloudWatchPolicyForLambda # See https://stackoverflow.com/questions/51166504/disable-cloudwatch-to-monitor-logs-for-lambda-function
-            Tags:
-                LambdaName: cron-build-bgs-hero-stats-slice
-            Events:
-                # Populate the info on the last hour
-                LastPeriodTrigger:
-                    Type: Schedule
-                    Properties:
-                        Schedule: cron(30 */4 * * ? *)
+            # Events:
+            #     # Populate the info on the last hour
+            #     LastPeriodTrigger:
+            #         Type: Schedule
+            #         Properties:
+            #             Schedule: cron(0 4 * * ? *) # Triggers every day at 4 AM

@@ -1,64 +1,172 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
-import { groupByFunction } from '@firestone-hs/aws-lambda-utils';
+import { getConnection, groupByFunction, http, logBeforeTimeout, logger, S3 } from '@firestone-hs/aws-lambda-utils';
 import { AllCardsService, CardIds, Race } from '@firestone-hs/reference-data';
+import { Context } from 'aws-lambda';
+import AWS from 'aws-sdk';
 import { ServerlessMysql } from 'serverless-mysql';
+import { Readable } from 'stream';
 import { gzipSync } from 'zlib';
 import { BgsGlobalHeroStat2, BgsGlobalStats2, MmrPercentile } from './bgs-global-stats';
-import { getConnection as getConnectionStats } from './db/rds';
-import { S3 } from './db/s3';
-import { formatDate, http, normalizeHeroCardId } from './utils/util-functions';
+import { formatDate, normalizeHeroCardId } from './utils/util-functions';
 
 const s3 = new S3();
 const allCards = new AllCardsService();
+const lambda = new AWS.Lambda();
+
+// const tableName = 'temp_cron_build_bgs_hero_stats';
 
 // This example demonstrates a NodeJS 8.10 async handler[1], however of course you could use
 // the more traditional callback-style handler.
 // [1]: https://aws.amazon.com/blogs/compute/node-js-8-10-runtime-now-available-in-aws-lambda/
-export default async (event): Promise<any> => {
-	await handleNewStats();
+export default async (event, context: Context): Promise<any> => {
+	await handleNewStats(event, context);
 };
 
-export const handleNewStats = async () => {
+export const handleNewStats = async (event, context: Context) => {
+	logger.log('event', event);
+	// const test = await readRowsFromS3();
+	// logger.log('test', test?.length, test);
+	// throw new Error('stopping');
 	await allCards.initializeCardsDb();
 	const lastPatch = await getLastBattlegroundsPatch();
-	const mysql = await getConnectionStats();
 
-	const rows: readonly InternalBgsRow[] = await loadRows(mysql, lastPatch);
-	const mmrPercentiles: readonly MmrPercentile[] = buildMmrPercentiles(rows);
+	if (event.permutation) {
+		// const mysql = await getConnection();
+		// const rows: readonly InternalBgsRow[] = await loadRows(mysql);
+		const rows: readonly InternalBgsRow[] = await readRowsFromS3();
+		// await mysql.end();
+		await handlePermutation(event.permutation, event.allTribes, rows, lastPatch);
+	} else {
+		const mysql = await getConnection();
+		// await extractData(mysql);
+		const rows: readonly InternalBgsRow[] = await loadRows(mysql);
+		await mysql.end();
+		await saveRowsOnS3(rows);
+		await dispatchNewLambdas(rows, context);
+	}
 
+	return { statusCode: 200, body: null };
+};
+
+const dispatchNewLambdas = async (rows: readonly InternalBgsRow[], context: Context) => {
 	// A basic approach could be to generate all files for all tribe combinations. That way,
 	// the app will only query static files with all the info for the specific tribe combination
 	const allTribes = extractAllTribes(rows);
 	console.log('all tribes', allTribes);
-
-	const tribePermutations = [null, ...combine(allTribes, 5)];
+	const tribePermutations: ('all' | Race[])[] = ['all', ...combine(allTribes, 5)];
 	// const tribePermutations = [null];
 	console.log('tribe permutations, should be 127 (126 + 1), because 9 tribes', tribePermutations.length);
 	// console.log('tribe permutations', tribePermutations);
 	for (const tribes of tribePermutations) {
-		// console.log('handling tribes', index++, tribes);
-		const tribesStr = !!tribes?.length ? tribes.join(',') : null;
-		const statsForTribes: BgsGlobalStats2 = {
-			lastUpdateDate: formatDate(new Date()),
-			mmrPercentiles: mmrPercentiles,
-			heroStats: buildHeroes(rows, lastPatch, mmrPercentiles, tribesStr),
+		console.log('handling tribes', tribes);
+		const newEvent = {
+			permutation: tribes,
 			allTribes: allTribes,
 		};
-		// console.log('\tstats for tribes', tribes, );
-		const stringResults = JSON.stringify(statsForTribes);
-		const gzippedResults = gzipSync(stringResults);
-		await s3.writeFile(
-			gzippedResults,
-			'static.zerotoheroes.com',
-			`api/bgs/bgs-global-stats-${!!tribes?.length ? tribes.join('-') : 'all-tribes'}.gz.json`,
-			'application/json',
-			'gzip',
-		);
+		const params = {
+			FunctionName: context.functionName,
+			InvocationType: 'Event',
+			LogType: 'Tail',
+			Payload: JSON.stringify(newEvent),
+		};
+		logger.log('\tinvoking lambda', params);
+		const result = await lambda
+			.invoke({
+				FunctionName: context.functionName,
+				InvocationType: 'Event',
+				LogType: 'Tail',
+				Payload: JSON.stringify(newEvent),
+			})
+			.promise();
+		logger.log('\tinvocation result', result);
+		// throw new Error('stopping process');
 	}
+};
 
-	await mysql.end();
+const handlePermutation = async (
+	tribes: 'all' | readonly Race[],
+	allTribes: readonly Race[],
+	rows: readonly InternalBgsRow[],
+	lastPatch: PatchInfo,
+) => {
+	const mmrPercentiles: readonly MmrPercentile[] = buildMmrPercentiles(rows);
+	logger.log('handling permutation', tribes);
+	const tribesStr = tribes === 'all' ? null : tribes.join(',');
+	const statsForTribes: BgsGlobalStats2 = {
+		lastUpdateDate: formatDate(new Date()),
+		mmrPercentiles: mmrPercentiles,
+		heroStats: buildHeroes(rows, lastPatch, mmrPercentiles, tribesStr),
+		allTribes: allTribes,
+	};
+	console.log('\tbuilt stats', statsForTribes.heroStats?.length);
+	await s3.writeFile(
+		gzipSync(JSON.stringify(statsForTribes)),
+		'static.zerotoheroes.com',
+		`api/bgs/bgs-global-stats-${tribes === 'all' ? 'all-tribes' : tribes.join('-')}.gz.json`,
+		'application/json',
+		'gzip',
+	);
+};
 
-	return { statusCode: 200, body: null };
+// const extractData = async (mysql: ServerlessMysql) => {
+// 	await mysql.query(`DROP TABLE IF EXISTS ${tableName};`);
+// 	const persistQuery = `
+// 		CREATE TABLE ${tableName}
+// 		AS SELECT * FROM bgs_run_stats WHERE creationDate > DATE_SUB(NOW(), INTERVAL 30 DAY);
+// 	`;
+// 	logger.log('creating work table', persistQuery);
+// 	await mysql.query(persistQuery);
+// };
+
+const saveRowsOnS3 = async (rows: readonly InternalBgsRow[]) => {
+	logger.log('saving rows on s3', rows.length);
+	await s3.writeArrayAsMultipart(rows, 'static.zerotoheroes.com', `api/bgs/working-rows.json`, 'application/json');
+	logger.log('file saved');
+};
+
+const readRowsFromS3 = async (): Promise<readonly InternalBgsRow[]> => {
+	return new Promise<readonly InternalBgsRow[]>((resolve, reject) => {
+		let parseErrors = 0;
+		let totalParsed = 0;
+		const stream: Readable = s3.readStream('static.zerotoheroes.com', `api/bgs/working-rows.json`);
+		const result: InternalBgsRow[] = [];
+		let previousString = '';
+		stream
+			.on('data', chunk => {
+				// logger.log('received data', chunk);
+				const str = Buffer.from(chunk).toString('utf-8');
+				// logger.log('string', str);
+				const newStr = previousString + str;
+				const split = newStr.split('\n');
+				// logger.log('splits', split.length);
+				// split.forEach(s => logger.log('split item', s));
+				// logger.log('leftover', split[split.length - 1]);
+				// const cleanPrefixStr = str.startsWith('[') ? str.slice(1) : str;
+				const rows: readonly InternalBgsRow[] = split.slice(0, split.length - 1).map(row => {
+					try {
+						const result = JSON.parse(row);
+						totalParsed++;
+						return result;
+					} catch (e) {
+						logger.warn('could not parse row', row);
+						parseErrors++;
+						// throw e;
+					}
+				});
+				previousString = split[split.length - 1];
+				// logger.log('rows', rows);
+				// logger.log('parsing errors', parseErrors, 'and successes', totalParsed);
+				result.push(...rows);
+			})
+			.on('end', () => {
+				const finalResult = result.filter(row => !!row);
+				logger.log('stream end', result.length, finalResult.length);
+				logger.log('parsing errors', parseErrors, 'and successes', totalParsed);
+				resolve(finalResult);
+			});
+	});
+	// const str = await s3.readContentAsString('static.zerotoheroes.com', `api/bgs/working-rows.json`);
+	// return JSON.parse(str);
 };
 
 // https://stackoverflow.com/a/47204248/548701
@@ -132,13 +240,13 @@ const buildHeroesForMmr = (
 	const rowsWithTribes = !!tribesStr
 		? rows.filter(row => !!row.tribes).filter(row => row.tribes === tribesStr)
 		: rows;
-	console.log(
-		'\tNumber of total rows matching tribes',
-		tribesStr,
-		mmr.percentile,
-		rowsWithTribes.length,
-		rows.length,
-	);
+	// console.log(
+	// 	'\tNumber of total rows matching tribes',
+	// 	tribesStr,
+	// 	mmr.percentile,
+	// 	rowsWithTribes.length,
+	// 	rows.length,
+	// );
 	const allTimeHeroes = buildHeroStats(rowsWithTribes, 'all-time', tribesStr);
 
 	const rowsForLastPatch = rowsWithTribes.filter(
@@ -146,25 +254,25 @@ const buildHeroesForMmr = (
 			row.buildNumber >= lastPatch.number ||
 			row.creationDate > new Date(new Date(lastPatch.date).getTime() + 24 * 60 * 60 * 1000),
 	);
-	console.log(
-		'\tNumber of last patch rows matching tribes',
-		tribesStr,
-		mmr.percentile,
-		rowsForLastPatch.length,
-		lastPatch.number,
-	);
+	// console.log(
+	// 	'\tNumber of last patch rows matching tribes',
+	// 	tribesStr,
+	// 	mmr.percentile,
+	// 	rowsForLastPatch.length,
+	// 	lastPatch.number,
+	// );
 	const lastPatchHeroes = buildHeroStats(rowsForLastPatch, 'last-patch', tribesStr);
 
 	const rowsForLastThree = rowsWithTribes.filter(
 		row => row.creationDate >= new Date(new Date().getTime() - 3 * 24 * 60 * 60 * 1000),
 	);
-	console.log('\tNumber of last three rows matching tribes', tribesStr, mmr.percentile, rowsForLastThree.length);
+	// console.log('\tNumber of last three rows matching tribes', tribesStr, mmr.percentile, rowsForLastThree.length);
 	const threeDaysHeroes = buildHeroStats(rowsForLastThree, 'past-three', tribesStr);
 
 	const rowsForLastSeven = rowsWithTribes.filter(
 		row => row.creationDate >= new Date(new Date().getTime() - 7 * 24 * 60 * 60 * 1000),
 	);
-	console.log('\tNumber of last seven rows matching tribes', tribesStr, mmr.percentile, rowsForLastSeven.length);
+	// console.log('\tNumber of last seven rows matching tribes', tribesStr, mmr.percentile, rowsForLastSeven.length);
 	const sevenDaysHeroes = buildHeroStats(rowsForLastSeven, 'past-seven', tribesStr);
 
 	// console.log('\tbuilt heroes for mmr', tribesStr);
@@ -318,13 +426,10 @@ const buildPlacementDistribution = (
 	return placementDistribution;
 };
 
-const loadRows = async (mysql: ServerlessMysql, patch: PatchInfo): Promise<readonly InternalBgsRow[]> => {
-	console.log('loading rows', patch);
+const loadRows = async (mysql: ServerlessMysql): Promise<readonly InternalBgsRow[]> => {
 	const query = `
 		SELECT * FROM bgs_run_stats
-		WHERE creationDate > DATE_SUB(NOW(), INTERVAL 30 DAY)
-		ORDER BY id DESC
-		LIMIT 1000000
+		WHERE creationDate > DATE_SUB(NOW(), INTERVAL 30 DAY);
 	`;
 	console.log('running query', query);
 	const rows: readonly InternalBgsRow[] = await mysql.query(query);
