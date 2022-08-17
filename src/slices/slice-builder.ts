@@ -126,7 +126,7 @@ const buildCombatWinrate = (
 ): readonly { turn: number; dataPoints: number; totalWinrate: number }[] => {
 	const data: { [turn: string]: { dataPoints: number; totalWinrate: number } } = {};
 	for (const row of rows) {
-		// console.log('building combatWinrate', row);
+		// logger.debug('building combatWinrate', row);
 		if (!row.combatWinrate?.length) {
 			continue;
 		}
@@ -134,12 +134,12 @@ const buildCombatWinrate = (
 		let parsed: readonly { turn: number; winrate: number }[] = null;
 		try {
 			parsed = JSON.parse(row.combatWinrate);
-			// console.log('parsed', parsed);
+			// logger.debug('parsed', parsed);
 			if (!parsed?.length) {
 				continue;
 			}
 		} catch (e) {
-			console.error('Could not parse combat winrate', row, e);
+			logger.error('Could not parse combat winrate', row, e);
 			continue;
 		}
 

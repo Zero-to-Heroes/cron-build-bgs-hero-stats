@@ -1,3 +1,4 @@
+import { logger } from '@firestone-hs/aws-lambda-utils';
 import { AllCardsService, CardIds, ReferenceCard } from '@firestone-hs/reference-data';
 
 export const toCreationDate = (today: Date): string => {
@@ -36,7 +37,7 @@ export const normalizeHeroCardId = (heroCardId: string, allCards: AllCardsServic
 	}
 	// Fallback to regex
 	const bgHeroSkinMatch = heroCardId.match(/(.*)_SKIN_.*/);
-	// console.debug('normalizing', heroCardId, bgHeroSkinMatch);
+	// logger.debug('normalizing', heroCardId, bgHeroSkinMatch);
 	if (bgHeroSkinMatch) {
 		return bgHeroSkinMatch[1];
 	}
@@ -66,7 +67,7 @@ export const combine = <T>(input: readonly T[], chooseN: number): T[][] => {
 			if (
 				intermediateResult.filter(e => !!e).length !== [...new Set(intermediateResult.filter(e => !!e))].length
 			) {
-				console.warn('duplicates', intermediateResult, i, start, chooseN);
+				logger.warn('duplicates', intermediateResult, i, start, chooseN);
 				throw new Error();
 			}
 			combineInternal(input, chooseN - 1, i + 1);

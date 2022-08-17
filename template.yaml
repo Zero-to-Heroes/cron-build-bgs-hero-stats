@@ -9,10 +9,11 @@ Resources:
         Type: AWS::Serverless::Function
         Properties:
             Handler: build-battlegrounds-hero-stats-new.default
-            Runtime: nodejs12.x
+            Runtime: nodejs16.x
             Timeout: 880
             CodeUri: ./dist/build-battlegrounds-hero-stats-new
-            MemorySize: 5000
+            MemorySize: 6000
+            ReservedConcurrentExecutions: 10
             Policies:
                 - AWSLambdaVPCAccessExecutionRole
                 - AmazonSESFullAccess
