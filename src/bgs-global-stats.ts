@@ -28,6 +28,7 @@ export class BgsGlobalStats2 {
 	readonly mmrPercentiles: readonly MmrPercentile[];
 	readonly heroStats: readonly BgsGlobalHeroStat2[];
 	readonly allTribes: readonly Race[];
+	readonly totalMatches: number;
 }
 
 export class BgsGlobalHeroStat2 {

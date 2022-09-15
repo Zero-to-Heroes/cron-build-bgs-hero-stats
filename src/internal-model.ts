@@ -2,6 +2,8 @@ import { Race } from '@firestone-hs/reference-data';
 import { BgsGlobalStats2 } from './bgs-global-stats';
 
 export interface InternalBgsRow {
+	readonly id: number;
+	readonly reviewId: string;
 	readonly creationDate: Date;
 	readonly buildNumber: number;
 	readonly rating: number;
@@ -11,6 +13,10 @@ export interface InternalBgsRow {
 	readonly combatWinrate: string;
 	readonly warbandStats: string;
 	readonly darkmoonPrizes: boolean;
+	readonly quests: boolean;
+	readonly bgsHeroQuests: string;
+	readonly bgsQUestsCompletedTimings: string;
+	readonly bgsHeroQuestRewards: string;
 }
 
 export interface Slice {

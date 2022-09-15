@@ -7,9 +7,12 @@ import { ServerlessMysql } from 'serverless-mysql';
 import { Readable } from 'stream';
 import { gzipSync } from 'zlib';
 import { BgsGlobalHeroStat2, BgsGlobalStats2, MmrPercentile } from './bgs-global-stats';
+import { buildMmrPercentiles, buildPlacementDistribution, filterRowsForTimePeriod, PatchInfo } from './common';
+import { InternalBgsRow } from './internal-model';
+import { handleQuests } from './quests';
 import { formatDate, normalizeHeroCardId } from './utils/util-functions';
 
-const s3 = new S3();
+export const s3 = new S3();
 const allCards = new AllCardsService();
 const lambda = new AWS.Lambda();
 
@@ -33,7 +36,13 @@ export const handleNewStats = async (event, context: Context) => {
 	await allCards.initializeCardsDb();
 	const lastPatch = await getLastBattlegroundsPatch();
 
-	if (event.permutation) {
+	if (event.quests) {
+		const rows: readonly InternalBgsRow[] = await readRowsFromS3();
+		logger.log('read rows', rows?.length);
+		for (const timePeriod of allTimePeriods) {
+			await handleQuests(timePeriod, rows, lastPatch);
+		}
+	} else if (event.permutation) {
 		const rows: readonly InternalBgsRow[] = await readRowsFromS3();
 		logger.log('read rows', rows?.length);
 		for (const timePeriod of allTimePeriods) {
@@ -45,19 +54,44 @@ export const handleNewStats = async (event, context: Context) => {
 		await mysql.end();
 		await saveRowsOnS3(rows);
 		await dispatchNewLambdas(rows, context);
+		await dispatchQuestsLambda(rows, context);
 	}
 
 	cleanup();
 	return { statusCode: 200, body: null };
 };
 
+const dispatchQuestsLambda = async (rows: readonly InternalBgsRow[], context: Context) => {
+	const newEvent = {
+		quests: true,
+	};
+	const params = {
+		FunctionName: context.functionName,
+		InvocationType: 'Event',
+		LogType: 'Tail',
+		Payload: JSON.stringify(newEvent),
+	};
+	logger.log('\tinvoking lambda', params);
+	const result = await lambda
+		.invoke({
+			FunctionName: context.functionName,
+			InvocationType: 'Event',
+			LogType: 'Tail',
+			Payload: JSON.stringify(newEvent),
+		})
+		.promise();
+	logger.log('\tinvocation result', result);
+};
 const dispatchNewLambdas = async (rows: readonly InternalBgsRow[], context: Context) => {
 	const allTribes = extractAllTribes(rows);
 	logger.log('all tribes', allTribes);
 	const tribePermutations: ('all' | Race[])[] = ['all', ...combine(allTribes, 5)];
 	logger.log('tribe permutations, should be 127 (126 + 1), because 9 tribes', tribePermutations.length);
 	for (const tribes of tribePermutations) {
-		logger.log('handling tribes', tribes);
+		logger.log('handling tribes', tribes, tribes !== 'all' && tribes.join('-'));
+		// if (tribes === 'all' || tribes.join('-') !== '17-20-23-43-92') {
+		// 	continue;
+		// }
 		const newEvent = {
 			permutation: tribes,
 			allTribes: allTribes,
@@ -94,8 +128,8 @@ const handlePermutation = async (
 		? rowsForTimePeriod.filter(row => !!row.tribes).filter(row => row.tribes === tribesStr)
 		: rowsForTimePeriod;
 	const mmrPercentiles: readonly MmrPercentile[] = buildMmrPercentiles(rowsWithTribes);
-	logger.log('handling permutation', tribes);
-	const stats: readonly BgsGlobalHeroStat2[] = buildHeroes(rowsForTimePeriod, mmrPercentiles).map(stat => ({
+	logger.log('handling permutation', tribes, timePeriod, rows?.length, rowsWithTribes?.length);
+	const stats: readonly BgsGlobalHeroStat2[] = buildHeroes(rowsWithTribes, mmrPercentiles).map(stat => ({
 		...stat,
 		tribes: tribes === 'all' ? allTribes : tribes,
 		date: timePeriod,
@@ -105,8 +139,9 @@ const handlePermutation = async (
 		mmrPercentiles: mmrPercentiles,
 		heroStats: stats,
 		allTribes: allTribes,
+		totalMatches: stats.map(s => s.totalMatches).reduce((a, b) => a + b, 0),
 	};
-	logger.log('\tbuilt stats', statsForTribes.heroStats?.length);
+	logger.log('\tbuilt stats', statsForTribes.totalMatches, statsForTribes.heroStats?.length);
 	const tribesSuffix = tribes === 'all' ? 'all-tribes' : tribes.join('-');
 	const timeSuffix = timePeriod;
 	await s3.writeFile(
@@ -204,7 +239,7 @@ const buildHeroes = (
 				rows.filter(row => mmrPercentile.percentile === 100 || row.rating >= mmrPercentile.mmr),
 			] as [MmrPercentile, readonly InternalBgsRow[]],
 	);
-	logger.log('mappedByMmr');
+	// logger.log('mappedByMmr');
 	return mappedByMmr
 		.map(([mmr, rows]) => {
 			logger.log('building heroes for mmr', mmr.percentile, rows.length);
@@ -221,7 +256,7 @@ const buildHeroStats = (rows: readonly InternalBgsRow[]): readonly BgsGlobalHero
 		// (row: InternalBgsRow) => `${row.heroCardId}-${row.darkmoonPrizes}`,
 		(row: InternalBgsRow) => row.heroCardId,
 	)(rows);
-	logger.log('grouped', Object.keys(grouped).length);
+	// logger.log('grouped', Object.keys(grouped).length);
 
 	const result = Object.values(grouped).map(groupedRows => {
 		const ref = groupedRows[0];
@@ -236,7 +271,7 @@ const buildHeroStats = (rows: readonly InternalBgsRow[]): readonly BgsGlobalHero
 			warbandStats: warbandStats,
 		} as BgsGlobalHeroStat2;
 	});
-	logger.log('built result');
+	// logger.log('built result');
 	return result;
 };
 
@@ -346,19 +381,6 @@ const buildCombatWinrate = (
 	return result;
 };
 
-const buildPlacementDistribution = (
-	rows: readonly InternalBgsRow[],
-): readonly { rank: number; totalMatches: number }[] => {
-	const placementDistribution: { rank: number; totalMatches: number }[] = [];
-	const groupedByPlacement: { [placement: string]: readonly InternalBgsRow[] } = groupByFunction(
-		(res: InternalBgsRow) => '' + res.rank,
-	)(rows);
-	Object.keys(groupedByPlacement).forEach(placement =>
-		placementDistribution.push({ rank: +placement, totalMatches: groupedByPlacement[placement].length }),
-	);
-	return placementDistribution;
-};
-
 const loadRows = async (mysql: ServerlessMysql): Promise<readonly InternalBgsRow[]> => {
 	// We actually use all the fields
 	const query = `
@@ -382,83 +404,9 @@ const loadRows = async (mysql: ServerlessMysql): Promise<readonly InternalBgsRow
 		}));
 };
 
-const filterRowsForTimePeriod = (
-	rows: readonly InternalBgsRow[],
-	timePeriod: 'all-time' | 'past-three' | 'past-seven' | 'last-patch',
-	lastPatch: PatchInfo,
-): readonly InternalBgsRow[] => {
-	switch (timePeriod) {
-		case 'last-patch':
-			return rows.filter(
-				row =>
-					row.buildNumber >= lastPatch.number ||
-					new Date(row.creationDate) > new Date(new Date(lastPatch.date).getTime() + 24 * 60 * 60 * 1000),
-			);
-		case 'past-three':
-			return rows.filter(row => new Date(row.creationDate) > new Date(new Date().getTime() - 3 * 60 * 60 * 1000));
-		case 'past-seven':
-			return rows.filter(row => new Date(row.creationDate) > new Date(new Date().getTime() - 7 * 60 * 60 * 1000));
-		case 'all-time':
-		default:
-			return rows;
-	}
-};
-
 const getLastBattlegroundsPatch = async (): Promise<PatchInfo> => {
 	const patchInfo = await http(`https://static.zerotoheroes.com/hearthstone/data/patches.json`);
 	const structuredPatch = JSON.parse(patchInfo);
 	const patchNumber = structuredPatch.currentBattlegroundsMetaPatch;
 	return structuredPatch.patches.find(patch => patch.number === patchNumber);
 };
-
-const buildMmrPercentiles = (rows: readonly InternalBgsRow[]): readonly MmrPercentile[] => {
-	const sortedMmrs = rows.map(row => row.rating).sort((a, b) => a - b);
-	const median = sortedMmrs[Math.floor(sortedMmrs.length / 2)];
-	const top25 = sortedMmrs[Math.floor((sortedMmrs.length / 4) * 3)];
-	const top10 = sortedMmrs[Math.floor((sortedMmrs.length / 10) * 9)];
-	// const top1 = sortedMmrs[Math.floor((sortedMmrs.length / 100) * 99)];
-	// logger.debug('percentiles', median, top25, top10, top1);
-	return [
-		{
-			percentile: 100,
-			mmr: 0,
-		},
-		{
-			percentile: 50,
-			mmr: median,
-		},
-		{
-			percentile: 25,
-			mmr: top25,
-		},
-		{
-			percentile: 10,
-			mmr: top10,
-		},
-		// {
-		// 	percentile: 1,
-		// 	mmr: top1,
-		// },
-	];
-};
-
-interface InternalBgsRow {
-	readonly id: number;
-	readonly creationDate: Date;
-	readonly buildNumber: number;
-	readonly rating: number;
-	readonly heroCardId: string;
-	readonly rank: number;
-	readonly reviewId: string;
-	readonly tribes: string;
-	readonly darkmoonPrizes: boolean;
-	readonly combatWinrate: string;
-	readonly warbandStats: string;
-}
-
-interface PatchInfo {
-	readonly number: number;
-	readonly version: string;
-	readonly name: string;
-	readonly date: string;
-}
