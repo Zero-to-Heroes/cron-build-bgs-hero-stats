@@ -15,9 +15,13 @@ export const filterRowsForTimePeriod = (
 					new Date(row.creationDate) > new Date(new Date(lastPatch.date).getTime() + 24 * 60 * 60 * 1000),
 			);
 		case 'past-three':
-			return rows.filter(row => new Date(row.creationDate) > new Date(new Date().getTime() - 3 * 60 * 60 * 1000));
+			return rows.filter(
+				row => new Date(row.creationDate) > new Date(new Date().getTime() - 3 * 24 * 60 * 60 * 1000),
+			);
 		case 'past-seven':
-			return rows.filter(row => new Date(row.creationDate) > new Date(new Date().getTime() - 7 * 60 * 60 * 1000));
+			return rows.filter(
+				row => new Date(row.creationDate) > new Date(new Date().getTime() - 7 * 24 * 60 * 60 * 1000),
+			);
 		case 'all-time':
 		default:
 			return rows;

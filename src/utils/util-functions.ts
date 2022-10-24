@@ -21,20 +21,19 @@ export const getCardFromCardId = (cardId: number | string, cards: AllCardsServic
 	return card;
 };
 
-export const normalizeHeroCardId = (heroCardId: string, allCards: AllCardsService = null): string => {
+export const normalizeHeroCardId = (heroCardId: string, allCards: AllCardsService): string => {
 	if (!heroCardId) {
 		return heroCardId;
 	}
 
-	if (allCards) {
-		const heroCard = allCards.getCard(heroCardId);
-		if (!!heroCard?.battlegroundsHeroParentDbfId) {
-			const parentCard = allCards.getCardFromDbfId(heroCard.battlegroundsHeroParentDbfId);
-			if (!!parentCard) {
-				return parentCard.id;
-			}
+	const heroCard = allCards.getCard(heroCardId);
+	if (!!heroCard?.battlegroundsHeroParentDbfId) {
+		const parentCard = allCards.getCardFromDbfId(heroCard.battlegroundsHeroParentDbfId);
+		if (!!parentCard) {
+			return parentCard.id;
 		}
 	}
+
 	// Fallback to regex
 	const bgHeroSkinMatch = heroCardId.match(/(.*)_SKIN_.*/);
 	// logger.debug('normalizing', heroCardId, bgHeroSkinMatch);

@@ -82,6 +82,7 @@ const dispatchQuestsLambda = async (rows: readonly InternalBgsRow[], context: Co
 		.promise();
 	logger.log('\tinvocation result', result);
 };
+
 const dispatchNewLambdas = async (rows: readonly InternalBgsRow[], context: Context) => {
 	const allTribes = extractAllTribes(rows);
 	logger.log('all tribes', allTribes);
@@ -89,7 +90,7 @@ const dispatchNewLambdas = async (rows: readonly InternalBgsRow[], context: Cont
 	logger.log('tribe permutations, should be 127 (126 + 1), because 9 tribes', tribePermutations.length);
 	for (const tribes of tribePermutations) {
 		logger.log('handling tribes', tribes, tribes !== 'all' && tribes.join('-'));
-		// if (tribes === 'all' || tribes.join('-') !== '17-20-23-43-92') {
+		// if (tribes !== 'all') {
 		// 	continue;
 		// }
 		const newEvent = {
@@ -122,11 +123,14 @@ const handlePermutation = async (
 	rows: readonly InternalBgsRow[],
 	lastPatch: PatchInfo,
 ) => {
+	console.log('total rows', rows.length);
 	const rowsForTimePeriod = filterRowsForTimePeriod(rows, timePeriod, lastPatch);
+	console.log('rows for time period', rowsForTimePeriod.length);
 	const tribesStr = tribes === 'all' ? null : tribes.join(',');
 	const rowsWithTribes = !!tribesStr
 		? rowsForTimePeriod.filter(row => !!row.tribes).filter(row => row.tribes === tribesStr)
 		: rowsForTimePeriod;
+	console.log('rowsWithTribes', rowsWithTribes.length);
 	const mmrPercentiles: readonly MmrPercentile[] = buildMmrPercentiles(rowsWithTribes);
 	logger.log('handling permutation', tribes, timePeriod, rows?.length, rowsWithTribes?.length);
 	const stats: readonly BgsGlobalHeroStat2[] = buildHeroes(rowsWithTribes, mmrPercentiles).map(stat => ({
@@ -254,7 +258,7 @@ const buildHeroes = (
 const buildHeroStats = (rows: readonly InternalBgsRow[]): readonly BgsGlobalHeroStat2[] => {
 	const grouped: { [groupingKey: string]: readonly InternalBgsRow[] } = groupByFunction(
 		// (row: InternalBgsRow) => `${row.heroCardId}-${row.darkmoonPrizes}`,
-		(row: InternalBgsRow) => row.heroCardId,
+		(row: InternalBgsRow) => normalizeHeroCardId(row.heroCardId, allCards),
 	)(rows);
 	// logger.log('grouped', Object.keys(grouped).length);
 
@@ -264,7 +268,7 @@ const buildHeroStats = (rows: readonly InternalBgsRow[]): readonly BgsGlobalHero
 		const combatWinrate = buildCombatWinrate(groupedRows);
 		const warbandStats = buildWarbandStats(groupedRows);
 		return {
-			cardId: ref.heroCardId,
+			cardId: normalizeHeroCardId(ref.heroCardId, allCards),
 			totalMatches: groupedRows.length,
 			placementDistribution: placementDistribution,
 			combatWinrate: combatWinrate,
@@ -400,7 +404,7 @@ const loadRows = async (mysql: ServerlessMysql): Promise<readonly InternalBgsRow
 		)
 		.map(row => ({
 			...row,
-			heroCardId: normalizeHeroCardId(row.heroCardId),
+			heroCardId: normalizeHeroCardId(row.heroCardId, allCards),
 		}));
 };
 
