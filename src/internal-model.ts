@@ -15,7 +15,8 @@ export interface InternalBgsRow {
 	readonly darkmoonPrizes: boolean;
 	readonly quests: boolean;
 	readonly bgsHeroQuests: string;
-	readonly bgsQUestsCompletedTimings: string;
+	readonly bgsQuestsCompletedTimings: string;
+	readonly bgsQuestsDifficulties: string;
 	readonly bgsHeroQuestRewards: string;
 }
 

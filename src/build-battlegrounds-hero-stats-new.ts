@@ -10,6 +10,7 @@ import { BgsGlobalHeroStat2, BgsGlobalStats2, MmrPercentile } from './bgs-global
 import { buildMmrPercentiles, buildPlacementDistribution, filterRowsForTimePeriod, PatchInfo } from './common';
 import { InternalBgsRow } from './internal-model';
 import { handleQuests } from './quests';
+import { handleQuestsV2 } from './quests-v2/quests-v2';
 import { formatDate, normalizeHeroCardId } from './utils/util-functions';
 
 export const s3 = new S3();
@@ -42,6 +43,12 @@ export const handleNewStats = async (event, context: Context) => {
 		for (const timePeriod of allTimePeriods) {
 			await handleQuests(timePeriod, rows, lastPatch);
 		}
+	} else if (event.questsV2) {
+		const rows: readonly InternalBgsRow[] = await readRowsFromS3();
+		logger.log('read rows', rows?.length);
+		for (const timePeriod of allTimePeriods) {
+			await handleQuestsV2(timePeriod, rows, lastPatch);
+		}
 	} else if (event.permutation) {
 		const rows: readonly InternalBgsRow[] = await readRowsFromS3();
 		logger.log('read rows', rows?.length);
@@ -55,6 +62,7 @@ export const handleNewStats = async (event, context: Context) => {
 		await saveRowsOnS3(rows);
 		await dispatchNewLambdas(rows, context);
 		await dispatchQuestsLambda(rows, context);
+		await dispatchQuestsV2Lambda(rows, context);
 	}
 
 	cleanup();
@@ -64,6 +72,28 @@ export const handleNewStats = async (event, context: Context) => {
 const dispatchQuestsLambda = async (rows: readonly InternalBgsRow[], context: Context) => {
 	const newEvent = {
 		quests: true,
+	};
+	const params = {
+		FunctionName: context.functionName,
+		InvocationType: 'Event',
+		LogType: 'Tail',
+		Payload: JSON.stringify(newEvent),
+	};
+	logger.log('\tinvoking lambda', params);
+	const result = await lambda
+		.invoke({
+			FunctionName: context.functionName,
+			InvocationType: 'Event',
+			LogType: 'Tail',
+			Payload: JSON.stringify(newEvent),
+		})
+		.promise();
+	logger.log('\tinvocation result', result);
+};
+
+const dispatchQuestsV2Lambda = async (rows: readonly InternalBgsRow[], context: Context) => {
+	const newEvent = {
+		questsV2: true,
 	};
 	const params = {
 		FunctionName: context.functionName,
