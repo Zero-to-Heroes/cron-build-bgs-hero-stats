@@ -4,7 +4,7 @@ import { gzipSync } from 'zlib';
 import { s3 } from '../build-battlegrounds-hero-stats-new';
 import { PatchInfo } from '../common';
 import { InternalBgsRow } from '../internal-model';
-import { BgsQuestStat, BgsQuestStats, BgsQuestTribeInfo } from './bgs-quest-stat';
+import { BgsQuestDifficultyInfo, BgsQuestStat, BgsQuestStats, BgsQuestTribeInfo } from './bgs-quest-stat';
 import { buildSplitStats } from './data-filter';
 
 export const handleQuestsV2 = async (
@@ -40,7 +40,9 @@ export const handleQuestsV2 = async (
 };
 
 const buildStats = (rows: readonly InternalBgsRow[]): readonly BgsQuestStat[] => {
-	const groupedByQuest = groupByFunction((row: InternalBgsRow) => row.bgsHeroQuests)(rows);
+	const groupedByQuest: {
+		[questCardId: string]: readonly InternalBgsRow[];
+	} = groupByFunction((row: InternalBgsRow) => row.bgsHeroQuests.trim())(rows);
 	return Object.values(groupedByQuest).flatMap(data => buildStatsForSingleQuest(data));
 };
 
@@ -72,7 +74,7 @@ const buildStatForSingleQuestAndHero = (rows: readonly InternalBgsRow[]): BgsQue
 	const averageDifficulty = average(difficulties);
 	const difficultyCurve = curve(difficulties);
 
-	const completedQuests = rows.filter(r => r.bgsQuestsCompletedTimings?.length);
+	const completedQuests = rows.filter(r => r.bgsQuestsCompletedTimings.length);
 	const completionRate = completedQuests.length / rows.length;
 	const turnsToComplete = completedQuests.map(r => parseInt(r.bgsQuestsCompletedTimings));
 	const averageTurnsToComplete = average(turnsToComplete);
@@ -85,6 +87,36 @@ const buildStatForSingleQuestAndHero = (rows: readonly InternalBgsRow[]): BgsQue
 	const placementsOnceCompleted = completedQuests.map(r => r.rank);
 	const averagePlacementOnceCompleted = average(placementsOnceCompleted);
 	const placementCurveOnceCompleted = curve(placementsOnceCompleted);
+
+	// Build stats based on the quest's difficulty
+	const difficultyInfos: BgsQuestDifficultyInfo[] = [];
+	const uniqueDifficulties = [...new Set(difficulties)];
+	for (const difficulty of uniqueDifficulties) {
+		const rowsWithDifficulty = rows.filter(r => parseInt(r.bgsQuestsDifficulties) === difficulty);
+		const completedQuestsForDifficulty = rowsWithDifficulty.filter(r => r.bgsQuestsCompletedTimings.length);
+		const averageTurnsToCompleteForDifficulty = average(
+			completedQuestsForDifficulty.map(r => parseInt(r.bgsQuestsCompletedTimings)),
+		);
+		const averagePlacementForDifficulty = average(rowsWithDifficulty.map(r => r.rank));
+		const averagePlacementOnceCompletedForDifficulty = average(
+			rowsWithDifficulty.filter(r => r.bgsQuestsCompletedTimings?.length).map(r => r.rank),
+		);
+		const difficultyImpactTurnsToComplete = averageTurnsToCompleteForDifficulty - averageTurnsToComplete;
+		const difficultyImpactPlacement = averagePlacementForDifficulty - averagePlacement;
+		const difficultyImpactPlacementOnceCompleted =
+			averagePlacementOnceCompletedForDifficulty - averagePlacementOnceCompleted;
+		const difficultyInfo: BgsQuestDifficultyInfo = {
+			difficulty: difficulty,
+			dataPoints: rowsWithDifficulty.length,
+			averageTurnsToCompleteForDifficulty: averageTurnsToCompleteForDifficulty,
+			averagePlacementForDifficulty: averagePlacementForDifficulty,
+			averagePlacementOnceCompletedForDifficulty: averagePlacementOnceCompletedForDifficulty,
+			difficultyImpactTurnsToComplete: difficultyImpactTurnsToComplete,
+			difficultyImpactPlacement: difficultyImpactPlacement,
+			difficultyImpactPlacementOnceCompleted: difficultyImpactPlacementOnceCompleted,
+		};
+		difficultyInfos.push(difficultyInfo);
+	}
 
 	// Tribe stats
 	const tribeInfos: BgsQuestTribeInfo[] = [];
@@ -129,6 +161,7 @@ const buildStatForSingleQuestAndHero = (rows: readonly InternalBgsRow[]): BgsQue
 		placementCurveOnceCompleted: placementCurveOnceCompleted,
 
 		tribeInfos: tribeInfos,
+		difficultyInfos: difficultyInfos,
 	};
 };
 
