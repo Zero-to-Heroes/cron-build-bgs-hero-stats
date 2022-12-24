@@ -7,6 +7,8 @@ import { BgsQuestStats } from './bgs-quest-stat';
 import { buildSplitStats } from './data-filter';
 import { buildStats } from './stats-buikder';
 
+export const QUESTS_BUCKET = `static.zerotoheroes.com`;
+
 export const handleQuestsV2 = async (
 	timePeriod: 'all-time' | 'past-three' | 'past-seven' | 'last-patch',
 	rows: readonly InternalBgsRow[],
@@ -32,7 +34,7 @@ export const handleQuestsV2 = async (
 	const timeSuffix = timePeriod;
 	await s3.writeFile(
 		gzipSync(JSON.stringify(statsForQuests)),
-		'static.zerotoheroes.com',
+		QUESTS_BUCKET,
 		`api/bgs/quests/bgs-quests-v2-${timeSuffix}.gz.json`,
 		'application/json',
 		'gzip',
