@@ -51,3 +51,5 @@ export interface MmrPercentile {
 	readonly mmr: number;
 	readonly percentile: 100 | 50 | 25 | 10 | 1;
 }
+
+export * from './stats-v2/bgs-hero-stat';

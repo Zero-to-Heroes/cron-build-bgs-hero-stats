@@ -11,6 +11,7 @@ import { buildMmrPercentiles, buildPlacementDistribution, filterRowsForTimePerio
 import { InternalBgsRow } from './internal-model';
 import { handleQuests } from './quests';
 import { handleQuestsV2 } from './quests-v2/quests-v2';
+import { handleStatsV2 } from './stats-v2/stats-v2';
 import { formatDate, normalizeHeroCardId } from './utils/util-functions';
 
 export const s3 = new S3();
@@ -49,6 +50,12 @@ export const handleNewStats = async (event, context: Context) => {
 		for (const timePeriod of allTimePeriods) {
 			await handleQuestsV2(timePeriod, rows, lastPatch);
 		}
+	} else if (event.statsV2) {
+		const rows: readonly InternalBgsRow[] = await readRowsFromS3();
+		logger.log('read rows', rows?.length);
+		for (const timePeriod of allTimePeriods) {
+			await handleStatsV2(timePeriod, rows, lastPatch, allCards);
+		}
 	} else if (event.permutation) {
 		const rows: readonly InternalBgsRow[] = await readRowsFromS3();
 		logger.log('read rows', rows?.length);
@@ -63,6 +70,7 @@ export const handleNewStats = async (event, context: Context) => {
 		await dispatchNewLambdas(rows, context);
 		await dispatchQuestsLambda(rows, context);
 		await dispatchQuestsV2Lambda(rows, context);
+		await dispatchStatsV2Lambda(rows, context);
 	}
 
 	cleanup();
@@ -94,6 +102,28 @@ const dispatchQuestsLambda = async (rows: readonly InternalBgsRow[], context: Co
 const dispatchQuestsV2Lambda = async (rows: readonly InternalBgsRow[], context: Context) => {
 	const newEvent = {
 		questsV2: true,
+	};
+	const params = {
+		FunctionName: context.functionName,
+		InvocationType: 'Event',
+		LogType: 'Tail',
+		Payload: JSON.stringify(newEvent),
+	};
+	logger.log('\tinvoking lambda', params);
+	const result = await lambda
+		.invoke({
+			FunctionName: context.functionName,
+			InvocationType: 'Event',
+			LogType: 'Tail',
+			Payload: JSON.stringify(newEvent),
+		})
+		.promise();
+	logger.log('\tinvocation result', result);
+};
+
+const dispatchStatsV2Lambda = async (rows: readonly InternalBgsRow[], context: Context) => {
+	const newEvent = {
+		statsV2: true,
 	};
 	const params = {
 		FunctionName: context.functionName,
@@ -349,7 +379,7 @@ const buildWarbandStats = (
 	return result;
 };
 
-const buildCombatWinrate = (
+export const buildCombatWinrate = (
 	rows: readonly InternalBgsRow[],
 ): readonly { turn: number; dataPoints: number; totalWinrate: number }[] => {
 	const ref = rows[0];

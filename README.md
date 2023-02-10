@@ -14,7 +14,7 @@ $ curl https://static-api.firestoneapp.com/bgs-quests?questCardId=BG24_Quest_313
 
 Used this project as template: https://github.com/alukach/aws-sam-typescript-boilerplate
 
-# Random musings
+# Random notes for Quests
 
 what do we want to get?
 

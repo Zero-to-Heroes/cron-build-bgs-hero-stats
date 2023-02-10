@@ -72,6 +72,18 @@ export const buildPlacementDistribution = (
 	return placementDistribution;
 };
 
+export const buildPlacementDistributionWithPercentages = (
+	rows: readonly InternalBgsRow[],
+): readonly { rank: number; percentage: number }[] => {
+	const placementDistribution = buildPlacementDistribution(rows);
+	const totalMatches = placementDistribution.map(p => p.totalMatches).reduce((a, b) => a + b, 0);
+	const result: readonly { rank: number; percentage: number }[] = placementDistribution.map(p => ({
+		rank: p.rank,
+		percentage: (100 * p.totalMatches) / totalMatches,
+	}));
+	return result;
+};
+
 export interface PatchInfo {
 	readonly number: number;
 	readonly version: string;
