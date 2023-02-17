@@ -18,7 +18,7 @@ export const handleQuestsV2 = async (
 		.filter(row => row.quests)
 		.filter(row => !!row.bgsHeroQuestRewards?.length)
 		.filter(row => !!row.bgsQuestsDifficulties?.length);
-	console.log('total relevant rows', rowsWithQuests?.length);
+	// console.log('total relevant rows', rowsWithQuests?.length);
 
 	const statResult = await buildSplitStats(rowsWithQuests, timePeriod, lastPatch, (data: InternalBgsRow[]) =>
 		buildStats(data),

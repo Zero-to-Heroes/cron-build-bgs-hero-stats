@@ -1,6 +1,6 @@
 {
 	"name": "@firestone-hs/bgs-global-stats",
-	"version": "1.0.33",
+	"version": "1.0.35",
 	"description": "",
 	"scripts": {
 		"lint": "eslint --color --fix --ext .ts .",

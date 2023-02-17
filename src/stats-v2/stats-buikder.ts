@@ -1,6 +1,6 @@
 import { groupByFunction } from '@firestone-hs/aws-lambda-utils';
-import { AllCardsService, CardIds, Race } from '@firestone-hs/reference-data';
-import { buildCombatWinrate } from '../build-battlegrounds-hero-stats-new';
+import { AllCardsService, Race } from '@firestone-hs/reference-data';
+import { buildCombatWinrate, buildWarbandStats } from '../build-battlegrounds-hero-stats-new';
 import { buildPlacementDistributionWithPercentages } from '../common';
 import { InternalBgsRow } from '../internal-model';
 import { normalizeHeroCardId } from '../utils/util-functions';
@@ -26,26 +26,20 @@ const buildStatsForSingleHero = (rows: readonly InternalBgsRow[]): BgsGlobalHero
 		turn: info.turn,
 		winrate: info.totalWinrate / info.dataPoints,
 	}));
+	const rawWarbandStats = buildWarbandStats(rows);
+	const warbandStats: readonly { turn: number; averageStats: number }[] = rawWarbandStats.map(info => ({
+		turn: info.turn,
+		averageStats: info.totalStats / info.dataPoints,
+	}));
 	const result: BgsGlobalHeroStat = {
 		heroCardId: ref.heroCardId,
 		dataPoints: rows.length,
 		averagePosition: averagePosition,
 		placementDistribution: placementDistribution,
 		combatWinrate: combatWinrate,
-		tribeStats: buildTribeStats(rows, averagePosition, placementDistribution, combatWinrate),
+		warbandStats: warbandStats,
+		tribeStats: buildTribeStats(rows, averagePosition, placementDistribution, combatWinrate, warbandStats),
 	};
-	if (ref.heroCardId === CardIds.PatchesThePirateBattlegrounds) {
-		console.debug('Patches sanity', result);
-		console.debug(
-			'Patches sanity',
-			result.tribeStats.map(t => t.impactAveragePosition * t.dataPoints).reduce((a, b) => a + b, 0),
-		);
-		console.debug(
-			'Patches sanity',
-			rows.filter(r => !r.tribes.includes('' + Race.PIRATE)).length,
-			rows.filter(r => !r.tribes.includes('' + Race.PIRATE)),
-		);
-	}
 	return result;
 };
 
@@ -54,6 +48,7 @@ const buildTribeStats = (
 	refAveragePosition: number,
 	refPlacementDistribution: readonly { rank: number; percentage: number }[],
 	refCombatWinrate: readonly { turn: number; winrate: number }[],
+	refWarbandStats: readonly { turn: number; averageStats: number }[],
 ): readonly BgsHeroTribeStat[] => {
 	const uniqueTribes: readonly Race[] = [...new Set(rows.flatMap(r => r.tribes.split(',')).map(r => parseInt(r)))];
 	return uniqueTribes.map(tribe => {
@@ -66,6 +61,11 @@ const buildTribeStats = (
 			turn: info.turn,
 			winrate: info.totalWinrate / info.dataPoints,
 		}));
+		const rawWarbandStats = buildWarbandStats(rowsForTribe);
+		const warbandStats: readonly { turn: number; averageStats: number }[] = rawWarbandStats.map(info => ({
+			turn: info.turn,
+			averageStats: info.totalStats / info.dataPoints,
+		}));
 		return {
 			tribe: tribe,
 			dataPoints: rowsForTribe.length,
@@ -77,7 +77,7 @@ const buildTribeStats = (
 				const newPlacementInfo = placementDistribution.find(p2 => p2.rank === p.rank);
 				// Cna happen when there isn't a lot of data points, typically for high MMR
 				if (!newPlacementInfo) {
-					console.log('missing placement info', placementDistribution, p);
+					// console.log('missing placement info', placementDistribution, p);
 				}
 				return {
 					rank: p.rank,
@@ -88,11 +88,22 @@ const buildTribeStats = (
 			impactCombatWinrate: refCombatWinrate.map(c => {
 				const newCombatWinrate = combatWinrate.find(c2 => c2.turn === c.turn);
 				if (!newCombatWinrate) {
-					console.debug('missing winrate info', combatWinrate);
+					// console.debug('missing winrate info', combatWinrate);
 				}
 				return {
 					turn: c.turn,
 					impact: (newCombatWinrate?.winrate ?? 0) - c.winrate,
+				};
+			}),
+			warbandStats: warbandStats,
+			impactWarbandStats: refWarbandStats.map(c => {
+				const newWarbandStats = warbandStats.find(c2 => c2.turn === c.turn);
+				if (!newWarbandStats) {
+					// console.debug('missing warband info', warbandStats);
+				}
+				return {
+					turn: c.turn,
+					impact: (newWarbandStats?.averageStats ?? 0) - c.averageStats,
 				};
 			}),
 		};

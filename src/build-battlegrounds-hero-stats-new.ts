@@ -339,7 +339,7 @@ const buildHeroStats = (rows: readonly InternalBgsRow[]): readonly BgsGlobalHero
 	return result;
 };
 
-const buildWarbandStats = (
+export const buildWarbandStats = (
 	rows: readonly InternalBgsRow[],
 ): readonly { turn: number; dataPoints: number; totalStats: number }[] => {
 	const data: { [turn: string]: { dataPoints: number; totalStats: number } } = {};
