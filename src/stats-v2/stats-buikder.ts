@@ -31,10 +31,21 @@ const buildStatsForSingleHero = (rows: readonly InternalBgsRow[]): BgsGlobalHero
 		turn: info.turn,
 		averageStats: info.totalStats / info.dataPoints,
 	}));
+
+	const allRanks = rows.map(r => r.rank);
+	const allDeviations = allRanks.map(r => averagePosition - r);
+	const squareDeviations = allDeviations.map(d => Math.pow(d, 2));
+	const sumOfSquares = squareDeviations.reduce((a, b) => a + b, 0);
+	const variance = sumOfSquares / rows.length;
+	const standardDeviation = Math.sqrt(variance);
+	const standardDeviationOfTheMean = standardDeviation / Math.sqrt(rows.length);
 	const result: BgsGlobalHeroStat = {
 		heroCardId: ref.heroCardId,
 		dataPoints: rows.length,
 		averagePosition: averagePosition,
+		standardDeviation: standardDeviation,
+		standardDeviationOfTheMean: standardDeviationOfTheMean,
+		conservativePositionEstimate: averagePosition + 3 * standardDeviationOfTheMean,
 		placementDistribution: placementDistribution,
 		combatWinrate: combatWinrate,
 		warbandStats: warbandStats,

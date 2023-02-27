@@ -13,6 +13,9 @@ export interface BgsGlobalHeroStat {
 	readonly heroCardId: string;
 	readonly dataPoints: number;
 	readonly averagePosition: number;
+	readonly standardDeviation: number;
+	readonly standardDeviationOfTheMean: number;
+	readonly conservativePositionEstimate: number;
 	readonly placementDistribution: readonly { rank: number; percentage: number }[];
 	readonly combatWinrate: readonly { turn: number; winrate: number }[];
 	readonly warbandStats: readonly { turn: number; averageStats: number }[];
