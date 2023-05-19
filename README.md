@@ -1,15 +1,3 @@
-# Deploy
-
-```
-npm run build && npm run package && npm run deploy
-
-rm -rf dist && tsc && rm -rf dist/node_modules && npm publish --access=public
-```
-
-```
-$ curl https://static-api.firestoneapp.com/bgs-quests?questCardId=BG24_Quest_313\&heroCardId=BG20_HERO_101\&difficulty=6\&tribes=14,18,20,43,92\&mmrPercentile=100
-```
-
 # Reference
 
 Used this project as template: https://github.com/alukach/aws-sam-typescript-boilerplate

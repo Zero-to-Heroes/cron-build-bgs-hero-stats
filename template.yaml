@@ -5,20 +5,6 @@ Transform: AWS::Serverless-2016-10-31
 Description: Lambda function that builds Battlegrounds hero stats on a regular schedule
 
 Resources:
-    # For now this is mostly for testing purposes
-    ApiGatewayQuestStatsApi:
-        Type: AWS::Serverless::Api
-        Properties:
-            StageName: prod
-            CacheClusterEnabled: false
-            # CacheClusterSize: '0.5'
-            MethodSettings:
-                - ResourcePath: /
-                  HttpMethod: GET
-                  CachingEnabled: false
-                  # CacheTtlInSeconds: 3600
-                  # CacheTtlInSeconds: 1
-
     BuildBgsHeroStatsFunction:
         Type: AWS::Serverless::Function
         Properties:
@@ -44,45 +30,3 @@ Resources:
                     Type: Schedule
                     Properties:
                         Schedule: cron(0 4 * * ? *) # Triggers every day at 4 AM
-
-    RetrieveQuestStatsFunction:
-        Type: AWS::Serverless::Function
-        Properties:
-            Handler: retrieve-quest-stats.default
-            Runtime: nodejs16.x
-            # API Gateway timeout is 30
-            Timeout: 29
-            MemorySize: 156
-            CodeUri: ./dist/retrieve-quest-stats
-            Policies:
-                - AWSLambdaVPCAccessExecutionRole
-                - AmazonSESFullAccess
-                - AmazonSQSFullAccess
-                - SecretsManagerReadWrite
-                # - arn:aws:iam::478062583808:policy/CloudWatchPolicyForLambda # See https://stackoverflow.com/questions/51166504/disable-cloudwatch-to-monitor-logs-for-lambda-function
-            Tags:
-                LambdaName: api-retrieve-quest-stats
-            Events:
-                GetQuestStatsResource:
-                    Type: Api
-                    Properties:
-                        Path: /
-                        Method: get
-                        RestApiId:
-                            Ref: ApiGatewayQuestStatsApi
-                        RequestParameters:
-                            - method.request.querystring.questCardId:
-                                  Required: false
-                                  Caching: false
-                            - method.request.querystring.heroCardId:
-                                  Required: false
-                                  Caching: false
-                            - method.request.querystring.difficulty:
-                                  Required: false
-                                  Caching: false
-                            - method.request.querystring.tribes:
-                                  Required: false
-                                  Caching: false
-                            - method.request.querystring.mmrPercentile:
-                                  Required: false
-                                  Caching: false
