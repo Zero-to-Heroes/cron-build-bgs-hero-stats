@@ -52,4 +52,5 @@ export interface MmrPercentile {
 	readonly percentile: 100 | 50 | 25 | 10 | 1;
 }
 
+export * from './quests-v2/bgs-quest-stat';
 export * from './stats-v2/bgs-hero-stat';
