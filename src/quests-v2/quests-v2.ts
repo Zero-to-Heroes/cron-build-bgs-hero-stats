@@ -5,7 +5,8 @@ import { PatchInfo } from '../common';
 import { InternalBgsRow } from '../internal-model';
 import { BgsQuestStats } from './bgs-quest-stat';
 import { buildSplitStats } from './data-filter';
-import { buildStats } from './stats-buikder';
+import { buildQuestStats } from './quests-stats-buikder';
+import { buildRewardsStats } from './rewards-stats-buikder';
 
 export const QUESTS_BUCKET = `static.zerotoheroes.com`;
 
@@ -15,22 +16,29 @@ export const handleQuestsV2 = async (
 	lastPatch: PatchInfo,
 ) => {
 	const rowsWithQuests = rows
-		.filter(row => row.quests)
-		.filter(row => !!row.bgsHeroQuestRewards?.length)
-		.filter(row => !!row.bgsQuestsDifficulties?.length);
+		.filter((row) => row.quests)
+		.filter((row) => !!row.bgsHeroQuestRewards?.length)
+		.filter((row) => !!row.bgsQuestsDifficulties?.length);
 	// console.log('total relevant rows', rowsWithQuests?.length);
 
-	const statResult = await buildSplitStats(rowsWithQuests, timePeriod, lastPatch, (data: InternalBgsRow[]) =>
-		buildStats(data),
+	const questStatsResult = await buildSplitStats(rowsWithQuests, timePeriod, lastPatch, (data: InternalBgsRow[]) =>
+		buildQuestStats(data),
 	);
-	const stats = statResult.stats;
+	const questStats = questStatsResult.stats;
+
+	const rewardStatsResult = await buildSplitStats(rowsWithQuests, timePeriod, lastPatch, (data: InternalBgsRow[]) =>
+		buildRewardsStats(data),
+	);
+	const rewardStats = rewardStatsResult.stats;
+
 	const statsForQuests: BgsQuestStats = {
 		lastUpdateDate: new Date(),
-		mmrPercentiles: statResult.mmrPercentiles,
-		questStats: stats,
+		mmrPercentiles: questStatsResult.mmrPercentiles,
+		questStats: questStats,
+		rewardStats: rewardStats,
 		dataPoints: rowsWithQuests.length,
 	};
-	logger.log('\tbuilt stats', statsForQuests.dataPoints, statsForQuests.questStats?.length);
+	logger.log('\tbuilt stats', timePeriod, statsForQuests.dataPoints, statsForQuests.questStats?.length);
 	const timeSuffix = timePeriod;
 	await s3.writeFile(
 		gzipSync(JSON.stringify(statsForQuests)),
