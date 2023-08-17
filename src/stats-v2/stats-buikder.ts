@@ -4,7 +4,7 @@ import { buildCombatWinrate, buildWarbandStats } from '../build-battlegrounds-he
 import { buildPlacementDistributionWithPercentages } from '../common';
 import { InternalBgsRow } from '../internal-model';
 import { normalizeHeroCardId } from '../utils/util-functions';
-import { BgsGlobalHeroStat, BgsHeroTribeStat } from './bgs-hero-stat';
+import { BgsGlobalHeroStat, BgsHeroAnomalyStat, BgsHeroTribeStat } from './bgs-hero-stat';
 
 export const buildStats = (
 	rows: readonly InternalBgsRow[],
@@ -13,28 +13,28 @@ export const buildStats = (
 	const groupedByHero: {
 		[questCardId: string]: readonly InternalBgsRow[];
 	} = groupByFunction((row: InternalBgsRow) => normalizeHeroCardId(row.heroCardId, allCards))(rows);
-	return Object.values(groupedByHero).flatMap(data => buildStatsForSingleHero(data));
+	return Object.values(groupedByHero).flatMap((data) => buildStatsForSingleHero(data));
 };
 
 // All rows here belong to a single hero
 const buildStatsForSingleHero = (rows: readonly InternalBgsRow[]): BgsGlobalHeroStat => {
 	const ref = rows[0];
-	const averagePosition = average(rows.map(r => r.rank));
+	const averagePosition = average(rows.map((r) => r.rank));
 	const placementDistribution = buildPlacementDistributionWithPercentages(rows);
 	const rawCombatWinrates = buildCombatWinrate(rows);
-	const combatWinrate: readonly { turn: number; winrate: number }[] = rawCombatWinrates.map(info => ({
+	const combatWinrate: readonly { turn: number; winrate: number }[] = rawCombatWinrates.map((info) => ({
 		turn: info.turn,
 		winrate: info.totalWinrate / info.dataPoints,
 	}));
 	const rawWarbandStats = buildWarbandStats(rows);
-	const warbandStats: readonly { turn: number; averageStats: number }[] = rawWarbandStats.map(info => ({
+	const warbandStats: readonly { turn: number; averageStats: number }[] = rawWarbandStats.map((info) => ({
 		turn: info.turn,
 		averageStats: info.totalStats / info.dataPoints,
 	}));
 
-	const allRanks = rows.map(r => r.rank);
-	const allDeviations = allRanks.map(r => averagePosition - r);
-	const squareDeviations = allDeviations.map(d => Math.pow(d, 2));
+	const allRanks = rows.map((r) => r.rank);
+	const allDeviations = allRanks.map((r) => averagePosition - r);
+	const squareDeviations = allDeviations.map((d) => Math.pow(d, 2));
 	const sumOfSquares = squareDeviations.reduce((a, b) => a + b, 0);
 	const variance = sumOfSquares / rows.length;
 	const standardDeviation = Math.sqrt(variance);
@@ -50,6 +50,7 @@ const buildStatsForSingleHero = (rows: readonly InternalBgsRow[]): BgsGlobalHero
 		combatWinrate: combatWinrate,
 		warbandStats: warbandStats,
 		tribeStats: buildTribeStats(rows, averagePosition, placementDistribution, combatWinrate, warbandStats),
+		anomalyStats: buildAnomalyStats(rows, averagePosition, placementDistribution, combatWinrate, warbandStats),
 	};
 	return result;
 };
@@ -61,19 +62,21 @@ const buildTribeStats = (
 	refCombatWinrate: readonly { turn: number; winrate: number }[],
 	refWarbandStats: readonly { turn: number; averageStats: number }[],
 ): readonly BgsHeroTribeStat[] => {
-	const uniqueTribes: readonly Race[] = [...new Set(rows.flatMap(r => r.tribes.split(',')).map(r => parseInt(r)))];
-	return uniqueTribes.map(tribe => {
-		const rowsForTribe = rows.filter(r => r.tribes.split(',').includes('' + tribe));
-		const rowsWithoutTribe = rows.filter(r => !r.tribes.split(',').includes('' + tribe));
-		const averagePosition = average(rowsForTribe.map(r => r.rank));
+	const uniqueTribes: readonly Race[] = [
+		...new Set(rows.flatMap((r) => r.tribes.split(',')).map((r) => parseInt(r))),
+	];
+	return uniqueTribes.map((tribe) => {
+		const rowsForTribe = rows.filter((r) => r.tribes.split(',').includes('' + tribe));
+		const rowsWithoutTribe = rows.filter((r) => !r.tribes.split(',').includes('' + tribe));
+		const averagePosition = average(rowsForTribe.map((r) => r.rank));
 		const placementDistribution = buildPlacementDistributionWithPercentages(rowsForTribe);
 		const rawCombatWinrates = buildCombatWinrate(rowsForTribe);
-		const combatWinrate = rawCombatWinrates.map(info => ({
+		const combatWinrate = rawCombatWinrates.map((info) => ({
 			turn: info.turn,
 			winrate: info.totalWinrate / info.dataPoints,
 		}));
 		const rawWarbandStats = buildWarbandStats(rowsForTribe);
-		const warbandStats: readonly { turn: number; averageStats: number }[] = rawWarbandStats.map(info => ({
+		const warbandStats: readonly { turn: number; averageStats: number }[] = rawWarbandStats.map((info) => ({
 			turn: info.turn,
 			averageStats: info.totalStats / info.dataPoints,
 		}));
@@ -84,8 +87,8 @@ const buildTribeStats = (
 			averagePosition: averagePosition,
 			impactAveragePosition: averagePosition - refAveragePosition,
 			placementDistribution: placementDistribution,
-			impactPlacementDistribution: refPlacementDistribution.map(p => {
-				const newPlacementInfo = placementDistribution.find(p2 => p2.rank === p.rank);
+			impactPlacementDistribution: refPlacementDistribution.map((p) => {
+				const newPlacementInfo = placementDistribution.find((p2) => p2.rank === p.rank);
 				// Cna happen when there isn't a lot of data points, typically for high MMR
 				if (!newPlacementInfo) {
 					// console.log('missing placement info', placementDistribution, p);
@@ -96,8 +99,8 @@ const buildTribeStats = (
 				};
 			}),
 			combatWinrate: combatWinrate,
-			impactCombatWinrate: refCombatWinrate.map(c => {
-				const newCombatWinrate = combatWinrate.find(c2 => c2.turn === c.turn);
+			impactCombatWinrate: refCombatWinrate.map((c) => {
+				const newCombatWinrate = combatWinrate.find((c2) => c2.turn === c.turn);
 				if (!newCombatWinrate) {
 					// console.debug('missing winrate info', combatWinrate);
 				}
@@ -107,8 +110,73 @@ const buildTribeStats = (
 				};
 			}),
 			warbandStats: warbandStats,
-			impactWarbandStats: refWarbandStats.map(c => {
-				const newWarbandStats = warbandStats.find(c2 => c2.turn === c.turn);
+			impactWarbandStats: refWarbandStats.map((c) => {
+				const newWarbandStats = warbandStats.find((c2) => c2.turn === c.turn);
+				if (!newWarbandStats) {
+					// console.debug('missing warband info', warbandStats);
+				}
+				return {
+					turn: c.turn,
+					impact: (newWarbandStats?.averageStats ?? 0) - c.averageStats,
+				};
+			}),
+		};
+	});
+};
+
+const buildAnomalyStats = (
+	rows: readonly InternalBgsRow[],
+	refAveragePosition: number,
+	refPlacementDistribution: readonly { rank: number; percentage: number }[],
+	refCombatWinrate: readonly { turn: number; winrate: number }[],
+	refWarbandStats: readonly { turn: number; averageStats: number }[],
+): readonly BgsHeroAnomalyStat[] => {
+	const uniqueAnomalies: readonly string[] = [...new Set(rows.flatMap((r) => r.bgsAnomalies))];
+	return uniqueAnomalies.map((anomaly) => {
+		const rowsForAnomaly = rows.filter((r) => r.bgsAnomalies.includes(anomaly));
+		const averagePosition = average(rowsForAnomaly.map((r) => r.rank));
+		const placementDistribution = buildPlacementDistributionWithPercentages(rowsForAnomaly);
+		const rawCombatWinrates = buildCombatWinrate(rowsForAnomaly);
+		const combatWinrate = rawCombatWinrates.map((info) => ({
+			turn: info.turn,
+			winrate: info.totalWinrate / info.dataPoints,
+		}));
+		const rawWarbandStats = buildWarbandStats(rowsForAnomaly);
+		const warbandStats: readonly { turn: number; averageStats: number }[] = rawWarbandStats.map((info) => ({
+			turn: info.turn,
+			averageStats: info.totalStats / info.dataPoints,
+		}));
+		return {
+			anomaly: anomaly,
+			dataPoints: rowsForAnomaly.length,
+			averagePosition: averagePosition,
+			impactAveragePosition: averagePosition - refAveragePosition,
+			placementDistribution: placementDistribution,
+			impactPlacementDistribution: refPlacementDistribution.map((p) => {
+				const newPlacementInfo = placementDistribution.find((p2) => p2.rank === p.rank);
+				// Cna happen when there isn't a lot of data points, typically for high MMR
+				if (!newPlacementInfo) {
+					// console.log('missing placement info', placementDistribution, p);
+				}
+				return {
+					rank: p.rank,
+					impact: (newPlacementInfo?.percentage ?? 0) - p.percentage,
+				};
+			}),
+			combatWinrate: combatWinrate,
+			impactCombatWinrate: refCombatWinrate.map((c) => {
+				const newCombatWinrate = combatWinrate.find((c2) => c2.turn === c.turn);
+				if (!newCombatWinrate) {
+					// console.debug('missing winrate info', combatWinrate);
+				}
+				return {
+					turn: c.turn,
+					impact: (newCombatWinrate?.winrate ?? 0) - c.winrate,
+				};
+			}),
+			warbandStats: warbandStats,
+			impactWarbandStats: refWarbandStats.map((c) => {
+				const newWarbandStats = warbandStats.find((c2) => c2.turn === c.turn);
 				if (!newWarbandStats) {
 					// console.debug('missing warband info', warbandStats);
 				}

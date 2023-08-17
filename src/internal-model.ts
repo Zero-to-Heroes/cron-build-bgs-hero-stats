@@ -18,6 +18,7 @@ export interface InternalBgsRow {
 	readonly bgsQuestsCompletedTimings: string;
 	readonly bgsQuestsDifficulties: string;
 	readonly bgsHeroQuestRewards: string;
+	readonly bgsAnomalies: string;
 }
 
 export interface Slice {
