@@ -2,17 +2,11 @@ import { logger } from '@firestone-hs/aws-lambda-utils';
 import { AllCardsService, CardIds, ReferenceCard } from '@firestone-hs/reference-data';
 
 export const toCreationDate = (today: Date): string => {
-	return `${today
-		.toISOString()
-		.slice(0, 19)
-		.replace('T', ' ')}.${today.getMilliseconds()}`;
+	return `${today.toISOString().slice(0, 19).replace('T', ' ')}.${today.getMilliseconds()}`;
 };
 
 export const formatDate = (today: Date): string => {
-	return `${today
-		.toISOString()
-		.slice(0, 19)
-		.replace('T', ' ')}.000000`;
+	return `${today.toISOString().slice(0, 19).replace('T', ' ')}.000000`;
 };
 
 export const getCardFromCardId = (cardId: number | string, cards: AllCardsService): ReferenceCard => {
@@ -64,7 +58,8 @@ export const combine = <T>(input: readonly T[], chooseN: number): T[][] => {
 		for (let i = start; i <= input.length - chooseN; i++) {
 			intermediateResult[intermediateResult.length - chooseN] = input[i];
 			if (
-				intermediateResult.filter(e => !!e).length !== [...new Set(intermediateResult.filter(e => !!e))].length
+				intermediateResult.filter((e) => !!e).length !==
+				[...new Set(intermediateResult.filter((e) => !!e))].length
 			) {
 				logger.warn('duplicates', intermediateResult, i, start, chooseN);
 				throw new Error();
@@ -88,4 +83,8 @@ export const getMax = (array: readonly number[]): number => {
 		max = array[len] > max ? array[len] : max;
 	}
 	return max;
+};
+
+export const round = (value: number): number => {
+	return Math.round(value * 100) / 100;
 };

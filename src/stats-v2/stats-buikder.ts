@@ -3,7 +3,7 @@ import { AllCardsService, Race } from '@firestone-hs/reference-data';
 import { buildCombatWinrate, buildWarbandStats } from '../build-battlegrounds-hero-stats-new';
 import { buildPlacementDistributionWithPercentages } from '../common';
 import { InternalBgsRow } from '../internal-model';
-import { normalizeHeroCardId } from '../utils/util-functions';
+import { normalizeHeroCardId, round } from '../utils/util-functions';
 import { BgsGlobalHeroStat, BgsHeroAnomalyStat, BgsHeroTribeStat } from './bgs-hero-stat';
 
 export const buildStats = (
@@ -24,12 +24,12 @@ const buildStatsForSingleHero = (rows: readonly InternalBgsRow[]): BgsGlobalHero
 	const rawCombatWinrates = buildCombatWinrate(rows);
 	const combatWinrate: readonly { turn: number; winrate: number }[] = rawCombatWinrates.map((info) => ({
 		turn: info.turn,
-		winrate: info.totalWinrate / info.dataPoints,
+		winrate: round(info.totalWinrate / info.dataPoints),
 	}));
 	const rawWarbandStats = buildWarbandStats(rows);
 	const warbandStats: readonly { turn: number; averageStats: number }[] = rawWarbandStats.map((info) => ({
 		turn: info.turn,
-		averageStats: info.totalStats / info.dataPoints,
+		averageStats: round(info.totalStats / info.dataPoints),
 	}));
 
 	const allRanks = rows.map((r) => r.rank);
@@ -42,10 +42,10 @@ const buildStatsForSingleHero = (rows: readonly InternalBgsRow[]): BgsGlobalHero
 	const result: BgsGlobalHeroStat = {
 		heroCardId: ref.heroCardId,
 		dataPoints: rows.length,
-		averagePosition: averagePosition,
-		standardDeviation: standardDeviation,
-		standardDeviationOfTheMean: standardDeviationOfTheMean,
-		conservativePositionEstimate: averagePosition + 3 * standardDeviationOfTheMean,
+		averagePosition: round(averagePosition),
+		standardDeviation: round(standardDeviation),
+		standardDeviationOfTheMean: round(standardDeviationOfTheMean),
+		conservativePositionEstimate: round(averagePosition + 3 * standardDeviationOfTheMean),
 		placementDistribution: placementDistribution,
 		combatWinrate: combatWinrate,
 		warbandStats: warbandStats,
@@ -73,7 +73,7 @@ const buildTribeStats = (
 		const rawCombatWinrates = buildCombatWinrate(rowsForTribe);
 		const combatWinrate = rawCombatWinrates.map((info) => ({
 			turn: info.turn,
-			winrate: info.totalWinrate / info.dataPoints,
+			winrate: round(info.totalWinrate / info.dataPoints),
 		}));
 		const rawWarbandStats = buildWarbandStats(rowsForTribe);
 		const warbandStats: readonly { turn: number; averageStats: number }[] = rawWarbandStats.map((info) => ({
@@ -84,8 +84,8 @@ const buildTribeStats = (
 			tribe: tribe,
 			dataPoints: rowsForTribe.length,
 			dataPointsOnMissingTribe: rowsWithoutTribe.length,
-			averagePosition: averagePosition,
-			impactAveragePosition: averagePosition - refAveragePosition,
+			averagePosition: round(averagePosition),
+			impactAveragePosition: round(averagePosition - refAveragePosition),
 			placementDistribution: placementDistribution,
 			impactPlacementDistribution: refPlacementDistribution.map((p) => {
 				const newPlacementInfo = placementDistribution.find((p2) => p2.rank === p.rank);
@@ -95,7 +95,7 @@ const buildTribeStats = (
 				}
 				return {
 					rank: p.rank,
-					impact: (newPlacementInfo?.percentage ?? 0) - p.percentage,
+					impact: round((newPlacementInfo?.percentage ?? 0) - p.percentage),
 				};
 			}),
 			combatWinrate: combatWinrate,
@@ -106,7 +106,7 @@ const buildTribeStats = (
 				}
 				return {
 					turn: c.turn,
-					impact: (newCombatWinrate?.winrate ?? 0) - c.winrate,
+					impact: round((newCombatWinrate?.winrate ?? 0) - c.winrate),
 				};
 			}),
 			warbandStats: warbandStats,
@@ -131,26 +131,27 @@ const buildAnomalyStats = (
 	refCombatWinrate: readonly { turn: number; winrate: number }[],
 	refWarbandStats: readonly { turn: number; averageStats: number }[],
 ): readonly BgsHeroAnomalyStat[] => {
-	const uniqueAnomalies: readonly string[] = [...new Set(rows.flatMap((r) => r.bgsAnomalies))];
+	const rowsWithAnomalies = rows.filter((r) => !!r.bgsAnomalies?.length);
+	const uniqueAnomalies: readonly string[] = [...new Set(rowsWithAnomalies.flatMap((r) => r.bgsAnomalies))];
 	return uniqueAnomalies.map((anomaly) => {
-		const rowsForAnomaly = rows.filter((r) => r.bgsAnomalies.includes(anomaly));
+		const rowsForAnomaly = rowsWithAnomalies.filter((r) => r.bgsAnomalies.includes(anomaly));
 		const averagePosition = average(rowsForAnomaly.map((r) => r.rank));
 		const placementDistribution = buildPlacementDistributionWithPercentages(rowsForAnomaly);
 		const rawCombatWinrates = buildCombatWinrate(rowsForAnomaly);
 		const combatWinrate = rawCombatWinrates.map((info) => ({
 			turn: info.turn,
-			winrate: info.totalWinrate / info.dataPoints,
+			winrate: round(info.totalWinrate / info.dataPoints),
 		}));
 		const rawWarbandStats = buildWarbandStats(rowsForAnomaly);
 		const warbandStats: readonly { turn: number; averageStats: number }[] = rawWarbandStats.map((info) => ({
 			turn: info.turn,
-			averageStats: info.totalStats / info.dataPoints,
+			averageStats: round(info.totalStats / info.dataPoints),
 		}));
 		return {
 			anomaly: anomaly,
 			dataPoints: rowsForAnomaly.length,
-			averagePosition: averagePosition,
-			impactAveragePosition: averagePosition - refAveragePosition,
+			averagePosition: round(averagePosition),
+			impactAveragePosition: round(averagePosition - refAveragePosition),
 			placementDistribution: placementDistribution,
 			impactPlacementDistribution: refPlacementDistribution.map((p) => {
 				const newPlacementInfo = placementDistribution.find((p2) => p2.rank === p.rank);
@@ -160,7 +161,7 @@ const buildAnomalyStats = (
 				}
 				return {
 					rank: p.rank,
-					impact: (newPlacementInfo?.percentage ?? 0) - p.percentage,
+					impact: round((newPlacementInfo?.percentage ?? 0) - p.percentage),
 				};
 			}),
 			combatWinrate: combatWinrate,
@@ -171,7 +172,7 @@ const buildAnomalyStats = (
 				}
 				return {
 					turn: c.turn,
-					impact: (newCombatWinrate?.winrate ?? 0) - c.winrate,
+					impact: round((newCombatWinrate?.winrate ?? 0) - c.winrate),
 				};
 			}),
 			warbandStats: warbandStats,
@@ -182,7 +183,7 @@ const buildAnomalyStats = (
 				}
 				return {
 					turn: c.turn,
-					impact: (newWarbandStats?.averageStats ?? 0) - c.averageStats,
+					impact: round((newWarbandStats?.averageStats ?? 0) - c.averageStats),
 				};
 			}),
 		};
