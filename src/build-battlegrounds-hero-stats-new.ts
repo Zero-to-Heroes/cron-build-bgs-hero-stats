@@ -319,7 +319,13 @@ export const buildWarbandStats = (
 			continue;
 		}
 
-		const parsed: readonly { turn: number; totalStats: number }[] = JSON.parse(row.warbandStats);
+		let parsed: readonly { turn: number; totalStats: number }[] = [];
+		try {
+			parsed = JSON.parse(row.warbandStats);
+		}
+		catch (e) {
+			logger.warn('Could not parse warband stats', row.id, row.warbandStats, e)
+		}
 		if (!parsed?.length) {
 			continue;
 		}
