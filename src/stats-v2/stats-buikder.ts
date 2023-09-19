@@ -10,6 +10,7 @@ export const buildStats = (
 	rows: readonly InternalBgsRow[],
 	allCards: AllCardsService,
 ): readonly BgsGlobalHeroStat[] => {
+	// This takes about 3s, so not impactful
 	const groupedByHero: {
 		[questCardId: string]: readonly InternalBgsRow[];
 	} = groupByFunction((row: InternalBgsRow) => normalizeHeroCardId(row.heroCardId, allCards))(rows);
@@ -18,10 +19,15 @@ export const buildStats = (
 
 // All rows here belong to a single hero
 const buildStatsForSingleHero = (rows: readonly InternalBgsRow[]): BgsGlobalHeroStat => {
+	const startTime = new Date().getTime();
 	const ref = rows[0];
 	const averagePosition = average(rows.map((r) => r.rank));
+	const placementStartTime = new Date().getTime();
 	const placementDistribution = buildPlacementDistributionWithPercentages(rows);
+	const placementProcessTime = new Date().getTime() - placementStartTime;
+	const winrateStartTime = new Date().getTime();
 	const rawCombatWinrates = buildCombatWinrate(rows);
+	const winrateProcessTime = new Date().getTime() - winrateStartTime;
 	const combatWinrate: readonly { turn: number; winrate: number }[] = rawCombatWinrates.map((info) => ({
 		turn: info.turn,
 		winrate: round(info.totalWinrate / info.dataPoints),
@@ -39,6 +45,12 @@ const buildStatsForSingleHero = (rows: readonly InternalBgsRow[]): BgsGlobalHero
 	const variance = sumOfSquares / rows.length;
 	const standardDeviation = Math.sqrt(variance);
 	const standardDeviationOfTheMean = standardDeviation / Math.sqrt(rows.length);
+	const tribeStartTime = new Date().getTime();
+	const tribeStats = buildTribeStats(rows, averagePosition, placementDistribution, combatWinrate, warbandStats);
+	const tribeProcessTime = new Date().getTime() - tribeStartTime;
+	const anomalyStartTime = new Date().getTime();
+	const anomalyStats = buildAnomalyStats(rows, averagePosition, placementDistribution, combatWinrate, warbandStats);
+	const anomalyProcessTime = new Date().getTime() - anomalyStartTime;
 	const result: BgsGlobalHeroStat = {
 		heroCardId: ref.heroCardId,
 		dataPoints: rows.length,
@@ -49,9 +61,21 @@ const buildStatsForSingleHero = (rows: readonly InternalBgsRow[]): BgsGlobalHero
 		placementDistribution: placementDistribution,
 		combatWinrate: combatWinrate,
 		warbandStats: warbandStats,
-		tribeStats: buildTribeStats(rows, averagePosition, placementDistribution, combatWinrate, warbandStats),
-		anomalyStats: buildAnomalyStats(rows, averagePosition, placementDistribution, combatWinrate, warbandStats),
+		tribeStats: tribeStats,
+		anomalyStats: anomalyStats,
 	};
+	const processTime = new Date().getTime() - startTime;
+	console.log(
+		'\tbuilt for hero',
+		processTime,
+		round(processTime / result.dataPoints),
+		result.heroCardId,
+		result.dataPoints,
+	);
+	console.log('\t\tplacement', placementProcessTime);
+	console.log('\t\twinrate', winrateProcessTime);
+	console.log('\t\ttribe', tribeProcessTime);
+	console.log('\t\tanomaly', anomalyProcessTime);
 	return result;
 };
 

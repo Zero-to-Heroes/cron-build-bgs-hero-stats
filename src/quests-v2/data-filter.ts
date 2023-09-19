@@ -17,10 +17,11 @@ export const buildSplitStats = async <T>(
 	const result: WithMmrAndTimePeriod<T>[] = [];
 	for (const mmrPercentile of mmrPercentiles) {
 		const mmrRows = rowsForTimePeriod.filter(
-			row => mmrPercentile.percentile === 100 || row.rating >= mmrPercentile.mmr,
+			(row) => mmrPercentile.percentile === 100 || row.rating >= mmrPercentile.mmr,
 		);
+		console.log('mmrRows', mmrRows.length, mmrPercentile.percentile, mmrPercentile.mmr);
 		result.push(
-			...statsBuilder(mmrRows).map(r => ({
+			...statsBuilder(mmrRows).map((r) => ({
 				...r,
 				mmrPercentile: mmrPercentile.percentile,
 				timePeriod: timePeriod,

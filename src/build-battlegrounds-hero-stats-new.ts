@@ -193,6 +193,7 @@ const saveRowsOnS3 = async (rows: readonly InternalBgsRow[]) => {
 
 const readRowsFromS3 = async (): Promise<readonly InternalBgsRow[]> => {
 	return new Promise<readonly InternalBgsRow[]>((resolve, reject) => {
+		console.debug('reading rows from s3');
 		let parseErrors = 0;
 		let totalParsed = 0;
 		const stream: Readable = s3.readStream('static.zerotoheroes.com', `api/bgs/working-rows.json`);
@@ -322,9 +323,8 @@ export const buildWarbandStats = (
 		let parsed: readonly { turn: number; totalStats: number }[] = [];
 		try {
 			parsed = JSON.parse(row.warbandStats);
-		}
-		catch (e) {
-			logger.warn('Could not parse warband stats', row.id, row.warbandStats, e)
+		} catch (e) {
+			logger.warn('Could not parse warband stats', row.id, row.warbandStats, e);
 		}
 		if (!parsed?.length) {
 			continue;
