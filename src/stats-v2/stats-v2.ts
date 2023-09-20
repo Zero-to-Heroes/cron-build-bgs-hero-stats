@@ -17,9 +17,7 @@ export const handleStatsV2 = async (
 	lastPatch: PatchInfo,
 	allCards: AllCardsService,
 ) => {
-	const rowsWithStats = rows.filter((row) => !!row.rank).filter((r) => !!r.tribes?.length);
-	console.log('total relevant rows', rowsWithStats?.length);
-
+	const rowsWithStats = rows;
 	const statResult = await buildSplitStats(rowsWithStats, timePeriod, lastPatch, (data: InternalBgsRow[]) =>
 		buildStats(data, allCards),
 	);

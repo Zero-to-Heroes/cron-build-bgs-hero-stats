@@ -13,6 +13,14 @@ export const buildSplitStats = async <T>(
 	mmrPercentiles: readonly MmrPercentile[];
 }> => {
 	const rowsForTimePeriod = filterRowsForTimePeriod(rows, timePeriod, lastPatch);
+	console.log('rowsForTimePeriod', timePeriod, rowsForTimePeriod.length);
+	if (!rowsForTimePeriod?.length) {
+		console.error(
+			'no rows for time period',
+			timePeriod,
+			rows.slice(0, 10).map((r) => ({ reviewId: r.reviewId, creationDate: r.creationDate })),
+		);
+	}
 	const mmrPercentiles: readonly MmrPercentile[] = buildMmrPercentiles(rowsForTimePeriod);
 	const result: WithMmrAndTimePeriod<T>[] = [];
 	for (const mmrPercentile of mmrPercentiles) {

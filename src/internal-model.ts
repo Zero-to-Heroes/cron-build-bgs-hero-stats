@@ -9,9 +9,15 @@ export interface InternalBgsRow {
 	readonly rating: number;
 	readonly heroCardId: string;
 	readonly rank: number;
+	/** @deprecated */
 	readonly tribes: string;
+	readonly tribesExpanded: readonly Race[];
+	/** @deprecated */
 	readonly combatWinrate: string;
+	// readonly combatWinrateExpanded: readonly { turn: number; winrate: number }[];
+	/** @deprecated */
 	readonly warbandStats: string;
+	// readonly warbandStatsExpanded: readonly { turn: number; totalStats: number }[];
 	readonly darkmoonPrizes: boolean;
 	readonly quests: boolean;
 	readonly bgsHeroQuests: string;

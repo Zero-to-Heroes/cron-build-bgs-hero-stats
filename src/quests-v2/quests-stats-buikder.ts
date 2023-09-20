@@ -37,12 +37,10 @@ const buildTribeStats = (
 	refAverageTurnToComplete: number,
 	refCompletionRate: number,
 ): readonly BgsQuestTribeStat[] => {
-	const rowsWithTribes = rows.filter((r) => !!r.tribes?.length);
-	const uniqueTribes: readonly Race[] = [
-		...new Set(rowsWithTribes.flatMap((r) => r.tribes.split(',')).map((r) => parseInt(r))),
-	];
+	const rowsWithTribes = rows;
+	const uniqueTribes: readonly Race[] = [...new Set(rowsWithTribes.flatMap((r) => r.tribesExpanded))];
 	return uniqueTribes.map((tribe) => {
-		const rowsForTribe = rowsWithTribes.filter((r) => r.tribes.split(',').includes('' + tribe));
+		const rowsForTribe = rowsWithTribes.filter((r) => r.tribesExpanded.includes(tribe));
 		const completed = rowsForTribe.filter((r) => !!r?.bgsQuestsCompletedTimings?.length);
 		const completionRate = completed.length / rowsForTribe.length;
 		const averageTurnToComplete = average(completed.map((r) => parseInt(r.bgsQuestsCompletedTimings)));

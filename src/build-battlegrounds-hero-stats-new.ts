@@ -37,11 +37,11 @@ export const handleNewStats = async (event, context: Context) => {
 
 	if (event.questsV2) {
 		const rows: readonly InternalBgsRow[] = await readRowsFromS3();
-		logger.log('read rows', rows?.length);
+		logger.log('building quest stats', event.timePeriod, rows?.length);
 		await handleQuestsV2(event.timePeriod, rows, lastPatch);
 	} else if (event.statsV2) {
 		const rows: readonly InternalBgsRow[] = await readRowsFromS3();
-		logger.log('read rows', rows?.length);
+		logger.log('building hero stats', event.timePeriod, rows?.length);
 		await handleStatsV2(event.timePeriod, rows, lastPatch, allCards);
 	} else if (event.permutation) {
 		// const rows: readonly InternalBgsRow[] = await readRowsFromS3();
@@ -52,9 +52,9 @@ export const handleNewStats = async (event, context: Context) => {
 		const rows: readonly InternalBgsRow[] = await loadRows(mysql);
 		await mysql.end();
 		await saveRowsOnS3(rows);
-		// await dispatchNewLambdas(rows, context);
-		await dispatchQuestsV2Lambda(rows, context);
 		await dispatchStatsV2Lambda(rows, context);
+		await dispatchQuestsV2Lambda(rows, context);
+		// await dispatchNewLambdas(rows, context);
 	}
 
 	cleanup();
@@ -186,8 +186,27 @@ const dispatchStatsV2Lambda = async (rows: readonly InternalBgsRow[], context: C
 // };
 
 const saveRowsOnS3 = async (rows: readonly InternalBgsRow[]) => {
-	logger.log('saving rows on s3', rows.length);
-	await s3.writeArrayAsMultipart(rows, 'static.zerotoheroes.com', `api/bgs/working-rows.json`, 'application/json');
+	logger.log('will save rows on s3', rows.length);
+	const enhancedRows = rows
+		.filter((row) => !!row.rank)
+		.filter((row) => !!row.tribes?.length)
+		.map(
+			(row) =>
+				({
+					...row,
+					reviewId: undefined,
+					tribesExpanded: row.tribes.split(',').map((tribe) => parseInt(tribe)),
+					tribes: undefined,
+				} as InternalBgsRow),
+		);
+	logger.log('saving rows on s3', enhancedRows.length);
+	await s3.writeArrayAsMultipart(
+		enhancedRows,
+		'static.zerotoheroes.com',
+		`api/bgs/working-rows.json`,
+		'application/json',
+		15000,
+	);
 	logger.log('file saved');
 };
 
@@ -206,7 +225,7 @@ const readRowsFromS3 = async (): Promise<readonly InternalBgsRow[]> => {
 				const split = newStr.split('\n');
 				const rows: readonly InternalBgsRow[] = split.slice(0, split.length - 1).map((row) => {
 					try {
-						const result = JSON.parse(row);
+						const result: InternalBgsRow = JSON.parse(row);
 						totalParsed++;
 						return result;
 					} catch (e) {

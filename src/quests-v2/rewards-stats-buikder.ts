@@ -27,12 +27,10 @@ const buildTribeStats = (
 	rows: readonly InternalBgsRow[],
 	refAveragePlacement: number,
 ): readonly BgsRewardTribeStat[] => {
-	const rowsWithTribes = rows.filter((r) => !!r.tribes?.length);
-	const uniqueTribes: readonly Race[] = [
-		...new Set(rowsWithTribes.flatMap((r) => r.tribes.split(',')).map((r) => parseInt(r))),
-	];
+	const rowsWithTribes = rows;
+	const uniqueTribes: readonly Race[] = [...new Set(rowsWithTribes.flatMap((r) => r.tribesExpanded))];
 	return uniqueTribes.map((tribe) => {
-		const rowsForTribe = rowsWithTribes.filter((r) => r.tribes.split(',').includes('' + tribe));
+		const rowsForTribe = rowsWithTribes.filter((r) => r.tribesExpanded.includes(tribe));
 		const placement = average(rowsForTribe.map((r) => r.rank));
 		return {
 			tribe: tribe,

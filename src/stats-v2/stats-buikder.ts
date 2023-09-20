@@ -86,24 +86,32 @@ const buildTribeStats = (
 	refCombatWinrate: readonly { turn: number; winrate: number }[],
 	refWarbandStats: readonly { turn: number; averageStats: number }[],
 ): readonly BgsHeroTribeStat[] => {
-	const uniqueTribes: readonly Race[] = [
-		...new Set(rows.flatMap((r) => r.tribes.split(',')).map((r) => parseInt(r))),
-	];
+	const uniqueTribes: readonly Race[] = [...new Set(rows.flatMap((r) => r.tribesExpanded))];
 	return uniqueTribes.map((tribe) => {
-		const rowsForTribe = rows.filter((r) => r.tribes.split(',').includes('' + tribe));
-		const rowsWithoutTribe = rows.filter((r) => !r.tribes.split(',').includes('' + tribe));
+		const rowsForTribe = rows.filter((r) => r.tribesExpanded.includes(tribe));
+		const rowsWithoutTribe = rows.filter((r) => !r.tribesExpanded.includes(tribe));
 		const averagePosition = average(rowsForTribe.map((r) => r.rank));
+		const distStartTime = new Date().getTime();
 		const placementDistribution = buildPlacementDistributionWithPercentages(rowsForTribe);
+		const distProcessTime = new Date().getTime() - distStartTime;
+		const combatStartTime = new Date().getTime();
 		const rawCombatWinrates = buildCombatWinrate(rowsForTribe);
 		const combatWinrate = rawCombatWinrates.map((info) => ({
 			turn: info.turn,
 			winrate: round(info.totalWinrate / info.dataPoints),
 		}));
+		const combatProcessTime = new Date().getTime() - combatStartTime;
+		const warbandStartTime = new Date().getTime();
 		const rawWarbandStats = buildWarbandStats(rowsForTribe);
 		const warbandStats: readonly { turn: number; averageStats: number }[] = rawWarbandStats.map((info) => ({
 			turn: info.turn,
 			averageStats: info.totalStats / info.dataPoints,
 		}));
+		const warbandProcessTime = new Date().getTime() - warbandStartTime;
+		console.log('tribeStats durations');
+		console.log('\tplacement', distProcessTime);
+		console.log('\tcombat', combatProcessTime);
+		console.log('\twarband', warbandProcessTime);
 		return {
 			tribe: tribe,
 			dataPoints: rowsForTribe.length,

@@ -12,7 +12,7 @@ Resources:
             Runtime: nodejs16.x
             Timeout: 880
             CodeUri: ./dist/build-battlegrounds-hero-stats-new
-            MemorySize: 6000
+            MemorySize: 8000
             ReservedConcurrentExecutions: 10
             Policies:
                 - AWSLambdaVPCAccessExecutionRole
