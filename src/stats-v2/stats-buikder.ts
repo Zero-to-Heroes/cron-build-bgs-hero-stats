@@ -91,73 +91,74 @@ const buildTribeStats = (
 		const rowsForTribe = rows.filter((r) => r.tribesExpanded.includes(tribe));
 		const rowsWithoutTribe = rows.filter((r) => !r.tribesExpanded.includes(tribe));
 		const averagePosition = average(rowsForTribe.map((r) => r.rank));
-		const distStartTime = new Date().getTime();
-		const placementDistribution = buildPlacementDistributionWithPercentages(rowsForTribe);
-		const distProcessTime = new Date().getTime() - distStartTime;
-		const combatStartTime = new Date().getTime();
-		const rawCombatWinrates = buildCombatWinrate(rowsForTribe);
-		const combatWinrate = rawCombatWinrates.map((info) => ({
-			turn: info.turn,
-			winrate: round(info.totalWinrate / info.dataPoints),
-		}));
-		const combatProcessTime = new Date().getTime() - combatStartTime;
-		const warbandStartTime = new Date().getTime();
-		const rawWarbandStats = buildWarbandStats(rowsForTribe);
-		const warbandStats: readonly { turn: number; averageStats: number }[] = rawWarbandStats.map((info) => ({
-			turn: info.turn,
-			averageStats: info.totalStats / info.dataPoints,
-		}));
-		const warbandProcessTime = new Date().getTime() - warbandStartTime;
-		console.log(
-			'tribeStats durations',
-			'placement',
-			distProcessTime,
-			'combat',
-			combatProcessTime,
-			'\twarband',
-			warbandProcessTime,
-		);
-		return {
+		// const distStartTime = new Date().getTime();
+		// const placementDistribution = buildPlacementDistributionWithPercentages(rowsForTribe);
+		// const distProcessTime = new Date().getTime() - distStartTime;
+		// const combatStartTime = new Date().getTime();
+		// const rawCombatWinrates = buildCombatWinrate(rowsForTribe);
+		// const combatWinrate = rawCombatWinrates.map((info) => ({
+		// 	turn: info.turn,
+		// 	winrate: round(info.totalWinrate / info.dataPoints),
+		// }));
+		// const combatProcessTime = new Date().getTime() - combatStartTime;
+		// const warbandStartTime = new Date().getTime();
+		// const rawWarbandStats = buildWarbandStats(rowsForTribe);
+		// const warbandStats: readonly { turn: number; averageStats: number }[] = rawWarbandStats.map((info) => ({
+		// 	turn: info.turn,
+		// 	averageStats: info.totalStats / info.dataPoints,
+		// }));
+		// const warbandProcessTime = new Date().getTime() - warbandStartTime;
+		// console.log(
+		// 	'tribeStats durations',
+		// 	'placement',
+		// 	distProcessTime,
+		// 	'combat',
+		// 	combatProcessTime,
+		// 	'\twarband',
+		// 	warbandProcessTime,
+		// );
+		const result: BgsHeroTribeStat = {
 			tribe: tribe,
 			dataPoints: rowsForTribe.length,
 			dataPointsOnMissingTribe: rowsWithoutTribe.length,
 			averagePosition: round(averagePosition),
 			impactAveragePosition: round(averagePosition - refAveragePosition),
-			placementDistribution: placementDistribution,
-			impactPlacementDistribution: refPlacementDistribution.map((p) => {
-				const newPlacementInfo = placementDistribution.find((p2) => p2.rank === p.rank);
-				// Cna happen when there isn't a lot of data points, typically for high MMR
-				if (!newPlacementInfo) {
-					// console.log('missing placement info', placementDistribution, p);
-				}
-				return {
-					rank: p.rank,
-					impact: round((newPlacementInfo?.percentage ?? 0) - p.percentage),
-				};
-			}),
-			combatWinrate: combatWinrate,
-			impactCombatWinrate: refCombatWinrate.map((c) => {
-				const newCombatWinrate = combatWinrate.find((c2) => c2.turn === c.turn);
-				if (!newCombatWinrate) {
-					// console.debug('missing winrate info', combatWinrate);
-				}
-				return {
-					turn: c.turn,
-					impact: round((newCombatWinrate?.winrate ?? 0) - c.winrate),
-				};
-			}),
-			warbandStats: warbandStats,
-			impactWarbandStats: refWarbandStats.map((c) => {
-				const newWarbandStats = warbandStats.find((c2) => c2.turn === c.turn);
-				if (!newWarbandStats) {
-					// console.debug('missing warband info', warbandStats);
-				}
-				return {
-					turn: c.turn,
-					impact: (newWarbandStats?.averageStats ?? 0) - c.averageStats,
-				};
-			}),
+			// placementDistribution: placementDistribution,
+			// impactPlacementDistribution: refPlacementDistribution.map((p) => {
+			// 	const newPlacementInfo = placementDistribution.find((p2) => p2.rank === p.rank);
+			// 	// Cna happen when there isn't a lot of data points, typically for high MMR
+			// 	if (!newPlacementInfo) {
+			// 		// console.log('missing placement info', placementDistribution, p);
+			// 	}
+			// 	return {
+			// 		rank: p.rank,
+			// 		impact: round((newPlacementInfo?.percentage ?? 0) - p.percentage),
+			// 	};
+			// }),
+			// combatWinrate: combatWinrate,
+			// impactCombatWinrate: refCombatWinrate.map((c) => {
+			// 	const newCombatWinrate = combatWinrate.find((c2) => c2.turn === c.turn);
+			// 	if (!newCombatWinrate) {
+			// 		// console.debug('missing winrate info', combatWinrate);
+			// 	}
+			// 	return {
+			// 		turn: c.turn,
+			// 		impact: round((newCombatWinrate?.winrate ?? 0) - c.winrate),
+			// 	};
+			// }),
+			// warbandStats: warbandStats,
+			// impactWarbandStats: refWarbandStats.map((c) => {
+			// 	const newWarbandStats = warbandStats.find((c2) => c2.turn === c.turn);
+			// 	if (!newWarbandStats) {
+			// 		// console.debug('missing warband info', warbandStats);
+			// 	}
+			// 	return {
+			// 		turn: c.turn,
+			// 		impact: (newWarbandStats?.averageStats ?? 0) - c.averageStats,
+			// 	};
+			// }),
 		};
+		return result;
 	});
 };
 
@@ -184,7 +185,7 @@ const buildAnomalyStats = (
 			turn: info.turn,
 			averageStats: round(info.totalStats / info.dataPoints),
 		}));
-		return {
+		const result: BgsHeroAnomalyStat = {
 			anomaly: anomaly,
 			dataPoints: rowsForAnomaly.length,
 			averagePosition: round(averagePosition),
@@ -224,6 +225,7 @@ const buildAnomalyStats = (
 				};
 			}),
 		};
+		return result;
 	});
 };
 

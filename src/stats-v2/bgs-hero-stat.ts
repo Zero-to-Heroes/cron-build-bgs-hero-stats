@@ -42,10 +42,10 @@ export interface BgsHeroAnomalyStat {
 	readonly dataPoints: number;
 	readonly averagePosition: number;
 	readonly impactAveragePosition: number;
-	// readonly placementDistribution: readonly { rank: number; percentage: number }[];
-	// readonly impactPlacementDistribution: readonly { rank: number; impact: number }[];
-	// readonly combatWinrate: readonly { turn: number; winrate: number }[];
-	// readonly impactCombatWinrate: readonly { turn: number; impact: number }[];
-	// readonly warbandStats: readonly { turn: number; averageStats: number }[];
-	// readonly impactWarbandStats: readonly { turn: number; impact: number }[];
+	readonly placementDistribution: readonly { rank: number; percentage: number }[];
+	readonly impactPlacementDistribution: readonly { rank: number; impact: number }[];
+	readonly combatWinrate: readonly { turn: number; winrate: number }[];
+	readonly impactCombatWinrate: readonly { turn: number; impact: number }[];
+	readonly warbandStats: readonly { turn: number; averageStats: number }[];
+	readonly impactWarbandStats: readonly { turn: number; impact: number }[];
 }
