@@ -73,7 +73,7 @@ export const handleStatsV2 = async (
 	await s3.writeFile(
 		gzipSync(JSON.stringify(statsV2light)),
 		STATS_BUCKET,
-		`api/bgs/stats-v2/light/bgs-${timeSuffix}.gz.json`,
+		`api/bgs/stats-v2/light/mmr-${mmrPercentile}/bgs-${timeSuffix}.gz.json`,
 		'application/json',
 		'gzip',
 	);
