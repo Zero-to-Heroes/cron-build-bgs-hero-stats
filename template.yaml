@@ -13,7 +13,7 @@ Resources:
             Timeout: 880
             CodeUri: ./dist/build-battlegrounds-hero-stats-new
             MemorySize: 8000
-            ReservedConcurrentExecutions: 10
+            ReservedConcurrentExecutions: 5
             Policies:
                 - AWSLambdaVPCAccessExecutionRole
                 - AmazonSESFullAccess

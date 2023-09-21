@@ -7,7 +7,7 @@ import { Readable } from 'stream';
 import { PatchInfo } from './common';
 import { InternalBgsRow } from './internal-model';
 import { handleQuestsV2 } from './quests-v2/quests-v2';
-import { saveRowsOnS3 } from './rows';
+import { saveRowsOnS3, WORKING_ROWS_FILE } from './rows';
 import { handleStatsV2 } from './stats-v2/stats-v2';
 
 export const s3 = new S3();
@@ -114,7 +114,7 @@ const readRowsFromS3 = async (): Promise<readonly InternalBgsRow[]> => {
 		console.debug('reading rows from s3');
 		let parseErrors = 0;
 		let totalParsed = 0;
-		const stream: Readable = s3.readStream('static.zerotoheroes.com', `api/bgs/working-rows.json`);
+		const stream: Readable = s3.readStream('static.zerotoheroes.com', `api/bgs/${WORKING_ROWS_FILE}`);
 		const result: InternalBgsRow[] = [];
 		let previousString = '';
 		stream
@@ -133,8 +133,21 @@ const readRowsFromS3 = async (): Promise<readonly InternalBgsRow[]> => {
 					}
 				});
 				previousString = split[split.length - 1];
-				logger.log('parsing errors', parseErrors, 'and successes', totalParsed);
+				// logger.log(
+				// 	'parsing errors',
+				// 	parseErrors,
+				// 	'and successes',
+				// 	totalParsed,
+				// 	'out of',
+				// 	rows?.length,
+				// 	// newStr?.slice(0, 400),
+				// );
 				result.push(...rows);
+				if (result.length === 0 && rows.length === 0) {
+					console.error(newStr);
+					console.error(split);
+					throw new Error('Could not parse any row');
+				}
 			})
 			.on('end', () => {
 				const finalResult = result.filter((row) => !!row);

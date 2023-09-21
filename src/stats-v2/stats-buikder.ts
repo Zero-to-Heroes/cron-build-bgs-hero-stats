@@ -71,11 +71,17 @@ const buildStatsForSingleHero = (rows: readonly InternalBgsRow[]): BgsGlobalHero
 		round(processTime / result.dataPoints),
 		result.heroCardId,
 		result.dataPoints,
+		{
+			placement: placementProcessTime,
+			winrate: winrateProcessTime,
+			tribe: tribeProcessTime,
+			anomaly: anomalyProcessTime,
+		},
 	);
-	console.log('\t\tplacement', placementProcessTime);
-	console.log('\t\twinrate', winrateProcessTime);
-	console.log('\t\ttribe', tribeProcessTime);
-	console.log('\t\tanomaly', anomalyProcessTime);
+	// console.log('\t\tplacement', placementProcessTime);
+	// console.log('\t\twinrate', winrateProcessTime);
+	// console.log('\t\ttribe', tribeProcessTime);
+	// console.log('\t\tanomaly', anomalyProcessTime);
 	return result;
 };
 

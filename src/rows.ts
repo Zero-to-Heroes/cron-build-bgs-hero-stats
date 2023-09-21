@@ -2,9 +2,11 @@ import { S3Multipart } from '@firestone-hs/aws-lambda-utils';
 import { AllCardsService, CardIds } from '@firestone-hs/reference-data';
 import { S3 as S3AWS } from 'aws-sdk';
 import SecretsManager, { GetSecretValueRequest, GetSecretValueResponse } from 'aws-sdk/clients/secretsmanager';
-import { Connection, createConnection } from 'mysql';
+import { Connection, createPool } from 'mysql';
 import { InternalBgsRow } from './internal-model';
 import { normalizeHeroCardId } from './utils/util-functions';
+
+export const WORKING_ROWS_FILE = `working-rows-2.json`;
 
 export const saveRowsOnS3 = async (allCards: AllCardsService) => {
 	console.log('will export rows to S3');
@@ -12,7 +14,8 @@ export const saveRowsOnS3 = async (allCards: AllCardsService) => {
 		SecretId: 'rds-connection',
 	};
 	const secret: SecretInfo = await getSecret(secretRequest);
-	const connection = createConnection({
+	const pool = createPool({
+		connectionLimit: 1,
 		host: secret.host,
 		user: secret.username,
 		password: secret.password,
@@ -20,13 +23,33 @@ export const saveRowsOnS3 = async (allCards: AllCardsService) => {
 		port: secret.port,
 	});
 
-	await performRowsProcessing(connection, allCards);
-	connection.end();
+	try {
+		await performRowProcessIngPool(pool, allCards);
+	} finally {
+		pool.end((err) => {
+			console.log('ending pool', err);
+		});
+	}
+};
+
+const performRowProcessIngPool = async (pool: any, allCards: AllCardsService) => {
+	return new Promise<void>((resolve) => {
+		pool.getConnection(async (err, connection) => {
+			if (err) {
+				console.log('error with connection', err);
+			} else {
+				await performRowsProcessing(connection, allCards);
+				connection.release();
+			}
+			resolve();
+		});
+	});
 };
 
 const performRowsProcessing = async (connection: Connection, allCards: AllCardsService) => {
 	const multipartUpload = new S3Multipart(new S3AWS());
-	await multipartUpload.initMultipart('static.zerotoheroes.com', `api/bgs/working-rows.json`, 'application/json');
+	await multipartUpload.initMultipart('static.zerotoheroes.com', `api/bgs/${WORKING_ROWS_FILE}`, 'application/json');
+	// console.log('multipart upload init');
 
 	return new Promise<void>((resolve) => {
 		const query = connection.query(`
@@ -52,7 +75,7 @@ const performRowsProcessing = async (connection: Connection, allCards: AllCardsS
 					// connection.pause();
 					const uploaded = await processRows(toUpload, multipartUpload, allCards);
 					rowCount += uploaded;
-					console.log('processed rows', rowsToProcess.length, rowCount);
+					console.log('processed rows', uploaded, rowCount);
 					// connection.resume();
 				}
 			})
@@ -70,21 +93,18 @@ const processRows = async (
 	allCards: AllCardsService,
 ) => {
 	const validRows = rows
-		.filter((row) => row.heroCardId.startsWith('TB_BaconShop_') || row.heroCardId.startsWith('BG'))
+		// .filter((row) => row.heroCardId.startsWith('TB_BaconShop_') || row.heroCardId.startsWith('BG'))
 		.filter(
 			(row) =>
 				row.heroCardId !== CardIds.ArannaStarseeker_ArannaUnleashedTokenBattlegrounds &&
 				row.heroCardId !== CardIds.QueenAzshara_NagaQueenAzsharaToken,
 		)
-		.map((row) => ({
-			...row,
-			heroCardId: normalizeHeroCardId(row.heroCardId, allCards),
-		}))
 		.filter((row) => !!row.rank)
 		.filter((row) => !!row.tribes?.length)
 		.map((row) => {
 			const result: InternalBgsRow = {
 				...row,
+				heroCardId: normalizeHeroCardId(row.heroCardId, allCards),
 				tribesExpanded: row.tribes.split(',').map((tribe) => parseInt(tribe)),
 			};
 			delete (result as any).reviewId;
@@ -92,7 +112,8 @@ const processRows = async (
 			return result;
 		});
 	if (validRows.length > 0) {
-		await multipartUpload.uploadPart(validRows);
+		// console.log('will upload', validRows.length);
+		await multipartUpload.uploadPart(validRows.map((r) => JSON.stringify(r)).join('\n'));
 		// logger.log('uploaded', validRows.length);
 	}
 	return validRows.length;
