@@ -7,7 +7,9 @@ export const buildRewardsStats = (rows: readonly InternalBgsRow[]): readonly Bgs
 	const groupedByReward: {
 		[rewardCardId: string]: readonly InternalBgsRow[];
 	} = groupByFunction((row: InternalBgsRow) => row.bgsHeroQuestRewards.trim())(rows);
-	return Object.values(groupedByReward).flatMap((data) => buildStatsForSingleReward(data));
+	return Object.values(groupedByReward)
+		.flatMap((data) => buildStatsForSingleReward(data))
+		.filter((s) => s.dataPoints > 100);
 };
 
 // All rows here belong to a single quest

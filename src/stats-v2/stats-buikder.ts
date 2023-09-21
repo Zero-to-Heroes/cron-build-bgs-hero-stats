@@ -14,7 +14,9 @@ export const buildStats = (
 	const groupedByHero: {
 		[questCardId: string]: readonly InternalBgsRow[];
 	} = groupByFunction((row: InternalBgsRow) => normalizeHeroCardId(row.heroCardId, allCards))(rows);
-	return Object.values(groupedByHero).flatMap((data) => buildStatsForSingleHero(data));
+	return Object.values(groupedByHero)
+		.flatMap((data) => buildStatsForSingleHero(data))
+		.filter((s) => s.dataPoints > 100);
 };
 
 // All rows here belong to a single hero

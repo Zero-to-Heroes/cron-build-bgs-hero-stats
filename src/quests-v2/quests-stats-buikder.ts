@@ -12,7 +12,9 @@ export const buildQuestStats = (rows: readonly InternalBgsRow[]): readonly BgsGl
 	const groupedByQuest: {
 		[questCardId: string]: readonly InternalBgsRow[];
 	} = groupByFunction((row: InternalBgsRow) => row.bgsHeroQuests.trim())(rowsWithDifficulty);
-	return Object.values(groupedByQuest).flatMap((data) => buildStatsForSingleQuest(data));
+	return Object.values(groupedByQuest)
+		.flatMap((data) => buildStatsForSingleQuest(data))
+		.filter((s) => s.dataPoints > 100);
 };
 
 // All rows here belong to a single quest

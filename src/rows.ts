@@ -37,6 +37,7 @@ const performRowProcessIngPool = async (pool: any, allCards: AllCardsService) =>
 		pool.getConnection(async (err, connection) => {
 			if (err) {
 				console.log('error with connection', err);
+				throw new Error('Could not connect to DB');
 			} else {
 				await performRowsProcessing(connection, allCards);
 				connection.release();
