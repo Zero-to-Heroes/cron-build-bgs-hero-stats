@@ -16,7 +16,7 @@ export const saveRowsOnS3 = async (allCards: AllCardsService) => {
 	const secret: SecretInfo = await getSecret(secretRequest);
 	const pool = createPool({
 		connectionLimit: 1,
-		host: secret.host,
+		host: secret.hostReadOnly,
 		user: secret.username,
 		password: secret.password,
 		database: 'replay_summary',
@@ -134,6 +134,7 @@ interface SecretInfo {
 	readonly username: string;
 	readonly password: string;
 	readonly host: string;
+	readonly hostReadOnly: string;
 	readonly port: number;
 	readonly dbClusterIdentifier: string;
 }
