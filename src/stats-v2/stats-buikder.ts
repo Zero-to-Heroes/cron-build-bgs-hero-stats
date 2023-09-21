@@ -108,10 +108,15 @@ const buildTribeStats = (
 			averageStats: info.totalStats / info.dataPoints,
 		}));
 		const warbandProcessTime = new Date().getTime() - warbandStartTime;
-		console.log('tribeStats durations');
-		console.log('\tplacement', distProcessTime);
-		console.log('\tcombat', combatProcessTime);
-		console.log('\twarband', warbandProcessTime);
+		console.log(
+			'tribeStats durations',
+			'placement',
+			distProcessTime,
+			'combat',
+			combatProcessTime,
+			'\twarband',
+			warbandProcessTime,
+		);
 		return {
 			tribe: tribe,
 			dataPoints: rowsForTribe.length,
