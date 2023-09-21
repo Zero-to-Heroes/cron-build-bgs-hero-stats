@@ -34,7 +34,7 @@ export const buildMmrPercentiles = (rows: readonly InternalBgsRow[]): readonly M
 	const median = sortedMmrs[Math.floor(sortedMmrs.length / 2)];
 	const top25 = sortedMmrs[Math.floor((sortedMmrs.length / 4) * 3)];
 	const top10 = sortedMmrs[Math.floor((sortedMmrs.length / 10) * 9)];
-	// const top1 = sortedMmrs[Math.floor((sortedMmrs.length / 100) * 99)];
+	const top1 = sortedMmrs[Math.floor((sortedMmrs.length / 100) * 99)];
 	// logger.debug('percentiles', median, top25, top10, top1);
 	return [
 		{
@@ -53,10 +53,10 @@ export const buildMmrPercentiles = (rows: readonly InternalBgsRow[]): readonly M
 			percentile: 10,
 			mmr: top10,
 		},
-		// {
-		// 	percentile: 1,
-		// 	mmr: top1,
-		// },
+		{
+			percentile: 1,
+			mmr: top1,
+		},
 	];
 };
 

@@ -20,6 +20,7 @@ const allTimePeriods: ('all-time' | 'past-three' | 'past-seven' | 'last-patch')[
 	'past-seven',
 	'last-patch',
 ];
+const allMmrPercentiles: (100 | 50 | 25 | 10 | 1)[] = [100, 50, 25, 10, 1];
 
 // This example demonstrates a NodeJS 8.10 async handler[1], however of course you could use
 // the more traditional callback-style handler.
@@ -37,11 +38,11 @@ export const handleNewStats = async (event, context: Context) => {
 	if (event.questsV2) {
 		const rows: readonly InternalBgsRow[] = await readRowsFromS3();
 		logger.log('building quest stats', event.timePeriod, rows?.length);
-		await handleQuestsV2(event.timePeriod, rows, lastPatch);
+		await handleQuestsV2(event.timePeriod, event.mmr, rows, lastPatch);
 	} else if (event.statsV2) {
 		const rows: readonly InternalBgsRow[] = await readRowsFromS3();
 		logger.log('building hero stats', event.timePeriod, rows?.length);
-		await handleStatsV2(event.timePeriod, rows, lastPatch, allCards);
+		await handleStatsV2(event.timePeriod, event.mmr, rows, lastPatch, allCards);
 	} else {
 		await saveRowsOnS3(allCards);
 		await dispatchStatsV2Lambda(context);
@@ -54,51 +55,57 @@ export const handleNewStats = async (event, context: Context) => {
 
 const dispatchQuestsV2Lambda = async (context: Context) => {
 	for (const timePeriod of allTimePeriods) {
-		const newEvent = {
-			questsV2: true,
-			timePeriod: timePeriod,
-		};
-		const params = {
-			FunctionName: context.functionName,
-			InvocationType: 'Event',
-			LogType: 'Tail',
-			Payload: JSON.stringify(newEvent),
-		};
-		logger.log('\tinvoking lambda', params);
-		const result = await lambda
-			.invoke({
+		for (const mmr of allMmrPercentiles) {
+			const newEvent = {
+				questsV2: true,
+				timePeriod: timePeriod,
+				mmr: mmr,
+			};
+			const params = {
 				FunctionName: context.functionName,
 				InvocationType: 'Event',
 				LogType: 'Tail',
 				Payload: JSON.stringify(newEvent),
-			})
-			.promise();
-		logger.log('\tinvocation result', result);
+			};
+			logger.log('\tinvoking lambda', params);
+			const result = await lambda
+				.invoke({
+					FunctionName: context.functionName,
+					InvocationType: 'Event',
+					LogType: 'Tail',
+					Payload: JSON.stringify(newEvent),
+				})
+				.promise();
+			logger.log('\tinvocation result', result);
+		}
 	}
 };
 
 const dispatchStatsV2Lambda = async (context: Context) => {
 	for (const timePeriod of allTimePeriods) {
-		const newEvent = {
-			statsV2: true,
-			timePeriod: timePeriod,
-		};
-		const params = {
-			FunctionName: context.functionName,
-			InvocationType: 'Event',
-			LogType: 'Tail',
-			Payload: JSON.stringify(newEvent),
-		};
-		logger.log('\tinvoking lambda', params);
-		const result = await lambda
-			.invoke({
+		for (const mmr of allMmrPercentiles) {
+			const newEvent = {
+				statsV2: true,
+				timePeriod: timePeriod,
+				mmr: mmr,
+			};
+			const params = {
 				FunctionName: context.functionName,
 				InvocationType: 'Event',
 				LogType: 'Tail',
 				Payload: JSON.stringify(newEvent),
-			})
-			.promise();
-		logger.log('\tinvocation result', result);
+			};
+			logger.log('\tinvoking lambda', params);
+			const result = await lambda
+				.invoke({
+					FunctionName: context.functionName,
+					InvocationType: 'Event',
+					LogType: 'Tail',
+					Payload: JSON.stringify(newEvent),
+				})
+				.promise();
+			logger.log('\tinvocation result', result);
+		}
 	}
 };
 

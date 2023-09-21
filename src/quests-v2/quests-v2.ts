@@ -12,6 +12,7 @@ export const QUESTS_BUCKET = `static.zerotoheroes.com`;
 
 export const handleQuestsV2 = async (
 	timePeriod: 'all-time' | 'past-three' | 'past-seven' | 'last-patch',
+	mmrPercentile: 100 | 50 | 25 | 10 | 1,
 	rows: readonly InternalBgsRow[],
 	lastPatch: PatchInfo,
 ) => {
@@ -21,13 +22,21 @@ export const handleQuestsV2 = async (
 		.filter((row) => !!row.bgsQuestsDifficulties?.length);
 	// console.log('total relevant rows', rowsWithQuests?.length);
 
-	const questStatsResult = await buildSplitStats(rowsWithQuests, timePeriod, lastPatch, (data: InternalBgsRow[]) =>
-		buildQuestStats(data),
+	const questStatsResult = await buildSplitStats(
+		rowsWithQuests,
+		timePeriod,
+		mmrPercentile,
+		lastPatch,
+		(data: InternalBgsRow[]) => buildQuestStats(data),
 	);
 	const questStats = questStatsResult.stats;
 
-	const rewardStatsResult = await buildSplitStats(rowsWithQuests, timePeriod, lastPatch, (data: InternalBgsRow[]) =>
-		buildRewardsStats(data),
+	const rewardStatsResult = await buildSplitStats(
+		rowsWithQuests,
+		timePeriod,
+		mmrPercentile,
+		lastPatch,
+		(data: InternalBgsRow[]) => buildRewardsStats(data),
 	);
 	const rewardStats = rewardStatsResult.stats;
 
@@ -43,7 +52,7 @@ export const handleQuestsV2 = async (
 	await s3.writeFile(
 		gzipSync(JSON.stringify(statsForQuests)),
 		QUESTS_BUCKET,
-		`api/bgs/quests/bgs-quests-v2-${timeSuffix}.gz.json`,
+		`api/bgs/quests/mmr-${mmrPercentile}/bgs-quests-v2-${timeSuffix}.gz.json`,
 		'application/json',
 		'gzip',
 	);

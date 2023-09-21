@@ -13,14 +13,22 @@ export const STATS_BUCKET = `static.zerotoheroes.com`;
 
 export const handleStatsV2 = async (
 	timePeriod: 'all-time' | 'past-three' | 'past-seven' | 'last-patch',
+	mmrPercentile: 100 | 50 | 25 | 10 | 1,
 	rows: readonly InternalBgsRow[],
 	lastPatch: PatchInfo,
 	allCards: AllCardsService,
 ) => {
 	const rowsWithStats = rows;
-	const statResult = await buildSplitStats(rowsWithStats, timePeriod, lastPatch, (data: InternalBgsRow[]) =>
-		buildStats(data, allCards),
+	const statResult = await buildSplitStats(
+		rowsWithStats,
+		timePeriod,
+		mmrPercentile,
+		lastPatch,
+		(data: InternalBgsRow[]) => buildStats(data, allCards),
 	);
+
+	// Build files for each anomalies
+	// const allAnomalies = [... new Set(statResult.stats.flatMap(stat => stat.anomalyStats).map(stat => stat.anomaly))];
 	const stats = statResult.stats;
 	const statsV2: BgsHeroStatsV2 = {
 		lastUpdateDate: new Date(),
@@ -33,7 +41,7 @@ export const handleStatsV2 = async (
 	await s3.writeFile(
 		gzipSync(JSON.stringify(statsV2)),
 		STATS_BUCKET,
-		`api/bgs/stats-v2/bgs-${timeSuffix}.gz.json`,
+		`api/bgs/stats-v2/mmr-${mmrPercentile}/bgs-${timeSuffix}.gz.json`,
 		'application/json',
 		'gzip',
 	);
