@@ -117,6 +117,7 @@ const readRowsFromS3 = async (): Promise<readonly InternalBgsRow[]> => {
 		const stream: Readable = s3.readStream('static.zerotoheroes.com', `api/bgs/${WORKING_ROWS_FILE}`);
 		const result: InternalBgsRow[] = [];
 		let previousString = '';
+		let emptyRowsInARow = 0;
 		stream
 			.on('data', (chunk) => {
 				const str = Buffer.from(chunk).toString('utf-8');
@@ -143,7 +144,14 @@ const readRowsFromS3 = async (): Promise<readonly InternalBgsRow[]> => {
 				// 	// newStr?.slice(0, 400),
 				// );
 				result.push(...rows);
+
+				// Do this to avoid errors in case the chunks are small compared to the row sizes
 				if (result.length === 0 && rows.length === 0) {
+					emptyRowsInARow++;
+				} else {
+					emptyRowsInARow = 0;
+				}
+				if (emptyRowsInARow > 50) {
 					console.error(newStr);
 					console.error(split);
 					throw new Error('Could not parse any row');
