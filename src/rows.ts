@@ -50,12 +50,11 @@ const performRowProcessIngPool = async (pool: any, allCards: AllCardsService) =>
 const performRowsProcessing = async (connection: Connection, allCards: AllCardsService) => {
 	const multipartUpload = new S3Multipart(new S3AWS());
 	await multipartUpload.initMultipart('static.zerotoheroes.com', `api/bgs/${WORKING_ROWS_FILE}`, 'application/json');
-	// console.log('multipart upload init');
+	console.log('multipart upload init');
 
 	return new Promise<void>((resolve) => {
 		const query = connection.query(`
-            SELECT *
-            FROM bgs_run_stats
+            SELECT * FROM bgs_run_stats
             WHERE creationDate > DATE_SUB(NOW(), INTERVAL 30 DAY);
         `);
 
@@ -70,10 +69,11 @@ const performRowsProcessing = async (connection: Connection, allCards: AllCardsS
 			})
 			.on('result', async (row) => {
 				rowsToProcess.push(row);
-				if (rowsToProcess.length > 30000 && !multipartUpload.processing) {
+				if (rowsToProcess.length > 20000 && !multipartUpload.processing) {
 					const toUpload = rowsToProcess;
 					rowsToProcess = [];
 					// connection.pause();
+					// console.debug('processing rows', toUpload.length);
 					const uploaded = await processRows(toUpload, multipartUpload, allCards);
 					rowCount += uploaded;
 					console.log('processed rows', uploaded, rowCount);
@@ -100,8 +100,7 @@ const processRows = async (
 				row.heroCardId !== CardIds.ArannaStarseeker_ArannaUnleashedTokenBattlegrounds &&
 				row.heroCardId !== CardIds.QueenAzshara_NagaQueenAzsharaToken,
 		)
-		.filter((row) => !!row.rank)
-		.filter((row) => !!row.tribes?.length)
+		.filter((row) => !!row.rank && !!row.tribes?.length)
 		.map((row) => {
 			const result: InternalBgsRow = {
 				...row,
@@ -115,7 +114,7 @@ const processRows = async (
 	if (validRows.length > 0) {
 		// console.log('will upload', validRows.length);
 		await multipartUpload.uploadPart(validRows.map((r) => JSON.stringify(r)).join('\n'));
-		// logger.log('uploaded', validRows.length);
+		// console.log('uploaded', validRows.length);
 	}
 	return validRows.length;
 };

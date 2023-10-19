@@ -29,4 +29,4 @@ Resources:
                 LastPeriodTrigger:
                     Type: Schedule
                     Properties:
-                        Schedule: cron(0 4 * * ? *) # Triggers every day at 4 AM
+                        Schedule: cron(0 14 * * ? *) # Triggers every day at 14 AM
