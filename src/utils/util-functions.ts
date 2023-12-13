@@ -36,8 +36,8 @@ export const normalizeHeroCardId = (heroCardId: string, allCards: AllCardsServic
 	}
 
 	switch (heroCardId) {
-		case CardIds.ArannaStarseeker_ArannaUnleashedTokenBattlegrounds:
-			return CardIds.ArannaStarseekerBattlegrounds;
+		case CardIds.ArannaStarseeker_ArannaUnleashedToken:
+			return CardIds.ArannaStarseeker_TB_BaconShop_HERO_59;
 		case CardIds.QueenAzshara_NagaQueenAzsharaToken:
 			return CardIds.QueenAzshara_BG22_HERO_007;
 		default:
@@ -87,4 +87,8 @@ export const getMax = (array: readonly number[]): number => {
 
 export const round = (value: number): number => {
 	return Math.round(value * 100) / 100;
+};
+
+export const average = (array: readonly number[]): number => {
+	return !array?.length ? 0 : array.reduce((a, b) => a + b, 0) / array.length;
 };

@@ -4,7 +4,7 @@ import { gzipSync } from 'zlib';
 import { MmrPercentile } from '../bgs-global-stats';
 import { InternalBgsRow } from '../internal-model';
 import { BgsGlobalHeroStat, BgsHeroStatsV2 } from '../models';
-import { STATS_BUCKET, STATS_KEY_PREFIX, s3 } from './_build-battlegrounds-hero-stats';
+import { HOURLY_KEY, STATS_BUCKET, s3 } from './_build-battlegrounds-hero-stats';
 import { buildHeroStatsForMmr } from './hero-stats-buikder';
 import { buildMmrPercentiles } from './utils';
 
@@ -30,11 +30,7 @@ export const buildHeroStats = async (
 		dataPoints: heroStats.map((s) => s.dataPoints).reduce((a, b) => a + b, 0),
 	};
 	logger.log('\tbuilt stats', statsV2.dataPoints, statsV2.heroStats?.length);
-	await s3.writeFile(
-		gzipSync(JSON.stringify(statsV2)),
-		STATS_BUCKET,
-		`${STATS_KEY_PREFIX}/hero-stats/mmr-${percentile}/hourly/${startDate}.gz.json`,
-		'application/json',
-		'gzip',
-	);
+	const destination = HOURLY_KEY.replace('%mmrPercentile%', `${percentile}`).replace('%startDate%', startDate);
+	await s3.writeFile(gzipSync(JSON.stringify(statsV2)), STATS_BUCKET, destination, 'application/json', 'gzip');
+	console.log('written file', destination);
 };

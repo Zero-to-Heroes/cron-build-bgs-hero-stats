@@ -49,11 +49,14 @@ export interface BgsHeroAnomalyStat {
 }
 
 export type WithMmrAndTimePeriod<T> = T & {
-	readonly mmrPercentile: 100 | 50 | 25 | 10 | 1;
-	readonly timePeriod: 'all-time' | 'past-three' | 'past-seven' | 'last-patch';
+	readonly mmrPercentile: MmrPercentileFilter;
+	readonly timePeriod: TimePeriod;
 };
 
 export interface MmrPercentile {
 	readonly mmr: number;
-	readonly percentile: 100 | 50 | 25 | 10 | 1;
+	readonly percentile: MmrPercentileFilter;
 }
+
+export type TimePeriod = 'all-time' | 'past-three' | 'past-seven' | 'last-patch';
+export type MmrPercentileFilter = 100 | 50 | 25 | 10 | 1;

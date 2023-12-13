@@ -163,7 +163,7 @@ const processRows = async (
 		// .filter((row) => row.heroCardId.startsWith('TB_BaconShop_') || row.heroCardId.startsWith('BG'))
 		.filter(
 			(row) =>
-				row.heroCardId !== CardIds.ArannaStarseeker_ArannaUnleashedTokenBattlegrounds &&
+				row.heroCardId !== CardIds.ArannaStarseeker_ArannaUnleashedToken &&
 				row.heroCardId !== CardIds.QueenAzshara_NagaQueenAzsharaToken,
 		)
 		.filter((row) => !!row.rank && !!row.tribes?.length)
