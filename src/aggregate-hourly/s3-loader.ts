@@ -11,7 +11,7 @@ export const loadHourlyDataFromS3 = async (
 ): Promise<readonly BgsHeroStatsV2[]> => {
 	const hoursBack: number = computeHoursBackFromNow(timePeriod, patchInfo);
 	const fileNames: readonly string[] = buildFileNames(hoursBack);
-	console.debug('fileNames', timePeriod, mmrPercentile, fileNames);
+	// console.debug('fileNames', timePeriod, mmrPercentile, fileNames);
 	const fileResults = await Promise.all(
 		fileNames.map((fileName) => loadHourlyDeckStatFromS3(mmrPercentile, fileName)),
 	);

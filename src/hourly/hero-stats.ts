@@ -1,4 +1,3 @@
-import { logger } from '@firestone-hs/aws-lambda-utils';
 import { AllCardsService } from '@firestone-hs/reference-data';
 import { gzipSync } from 'zlib';
 import { MmrPercentile } from '../bgs-global-stats';
@@ -29,8 +28,8 @@ export const buildHeroStats = async (
 		})),
 		dataPoints: heroStats.map((s) => s.dataPoints).reduce((a, b) => a + b, 0),
 	};
-	logger.log('\tbuilt stats', statsV2.dataPoints, statsV2.heroStats?.length);
+	// logger.log('\tbuilt stats', statsV2.dataPoints, statsV2.heroStats?.length);
 	const destination = HOURLY_KEY.replace('%mmrPercentile%', `${percentile}`).replace('%startDate%', startDate);
 	await s3.writeFile(gzipSync(JSON.stringify(statsV2)), STATS_BUCKET, destination, 'application/json', 'gzip');
-	console.log('written file', destination);
+	// console.log('written file', destination);
 };

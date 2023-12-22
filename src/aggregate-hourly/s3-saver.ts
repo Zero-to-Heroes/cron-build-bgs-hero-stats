@@ -20,7 +20,7 @@ export const persistData = async (
 		dataPoints: mergedStats.map((s) => s.dataPoints).reduce((a, b) => a + b, 0),
 		mmrPercentiles: mmrPercentiles,
 	};
-	console.log('persisting data', stat.dataPoints, stat.heroStats?.length);
+	// console.log('persisting data', stat.dataPoints, stat.heroStats?.length);
 	await s3.writeFile(
 		gzipSync(JSON.stringify(stat)),
 		STATS_BUCKET,

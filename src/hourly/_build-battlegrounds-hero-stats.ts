@@ -27,7 +27,7 @@ export default async (event, context: Context): Promise<any> => {
 
 export const handleNewStats = async (event, context: Context) => {
 	const cleanup = logBeforeTimeout(context);
-	logger.log('event', event);
+	// logger.log('event', event);
 	await allCards.initializeCardsDb();
 
 	if (event.questsV2) {
@@ -44,7 +44,7 @@ export const handleNewStats = async (event, context: Context) => {
 		startDate.setSeconds(0);
 		startDate.setMilliseconds(0);
 		startDate.setHours(startDate.getHours() - 1);
-		console.log('processStartDate', startDate);
+		// console.log('processStartDate', startDate);
 		// End one hour later
 		const endDate = new Date(startDate);
 		endDate.setHours(endDate.getHours() + 1);
@@ -71,7 +71,7 @@ const dispatchQuestsV2Lambda = async (context: Context, startDate: Date) => {
 			LogType: 'Tail',
 			Payload: JSON.stringify(newEvent),
 		};
-		logger.log('\tinvoking lambda', params);
+		// logger.log('\tinvoking lambda', params);
 		const result = await lambda
 			.invoke({
 				FunctionName: context.functionName,
@@ -80,7 +80,7 @@ const dispatchQuestsV2Lambda = async (context: Context, startDate: Date) => {
 				Payload: JSON.stringify(newEvent),
 			})
 			.promise();
-		logger.log('\tinvocation result', result);
+		// logger.log('\tinvocation result', result);
 	}
 };
 
@@ -106,6 +106,6 @@ const dispatchStatsV2Lambda = async (context: Context, startDate: Date) => {
 				Payload: JSON.stringify(newEvent),
 			})
 			.promise();
-		logger.log('\tinvocation result', result);
+		// logger.log('\tinvocation result', result);
 	}
 };

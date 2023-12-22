@@ -13,7 +13,7 @@ export const computeHoursBackFromNow = (timePeriod: TimePeriod, patchInfo: Patch
 		case 'last-patch':
 			const patchReleaseDate = new Date(patchInfo.date);
 			const hours = Math.floor((Date.now() - patchReleaseDate.getTime()) / (1000 * 60 * 60));
-			console.debug('hours since last patch', hours, patchReleaseDate, patchInfo);
+			// console.debug('hours since last patch', hours, patchReleaseDate, patchInfo);
 			return hours;
 	}
 };

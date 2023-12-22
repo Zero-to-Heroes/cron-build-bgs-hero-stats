@@ -14,9 +14,12 @@ export interface BgsGlobalHeroStat {
 	readonly standardDeviation: number;
 	readonly standardDeviationOfTheMean: number;
 	readonly conservativePositionEstimate: number;
-	readonly placementDistribution: readonly { rank: number; percentage: number }[];
-	readonly combatWinrate: readonly { turn: number; winrate: number }[];
-	readonly warbandStats: readonly { turn: number; averageStats: number }[];
+	readonly placementDistribution?: readonly { rank: number; percentage: number }[];
+	readonly placementDistributionRaw?: readonly { rank: number; totalMatches: number }[];
+	readonly combatWinrate?: readonly { turn: number; winrate: number }[];
+	readonly combatWinrateRaw?: readonly { turn: number; dataPoints: number; totalWinrate: number }[];
+	readonly warbandStats?: readonly { turn: number; averageStats: number }[];
+	readonly warbandStatsRaw?: readonly { turn: number; dataPoints: number; totalStats: number }[];
 	readonly tribeStats: readonly BgsHeroTribeStat[];
 	readonly anomalyStats: readonly BgsHeroAnomalyStat[];
 }
@@ -41,6 +44,7 @@ export interface BgsHeroAnomalyStat {
 	readonly averagePosition: number;
 	readonly impactAveragePosition: number;
 	readonly placementDistribution: readonly { rank: number; percentage: number }[];
+	readonly placementDistributionRaw: readonly { rank: number; totalMatches: number }[];
 	readonly impactPlacementDistribution: readonly { rank: number; impact: number }[];
 	readonly combatWinrate: readonly { turn: number; winrate: number }[];
 	readonly impactCombatWinrate: readonly { turn: number; impact: number }[];

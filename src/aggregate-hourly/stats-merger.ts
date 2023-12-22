@@ -11,7 +11,7 @@ export const mergeStats = (
 	const allStats: readonly BgsGlobalHeroStat[] = hourlyData
 		.flatMap((data) => data.heroStats)
 		.filter((stat) => stat.mmrPercentile === mmrPercentile);
-	console.debug('allStats', mmrPercentile, allStats.length, '/', hourlyData.length);
+	// console.debug('allStats', mmrPercentile, allStats.length, '/', hourlyData.length);
 	const groupedByHero: {
 		[heroCardId: string]: readonly BgsGlobalHeroStat[];
 	} = groupByFunction((stat: BgsGlobalHeroStat) => stat.heroCardId)(allStats);
@@ -38,9 +38,9 @@ const mergeStatsForSingleHero = (stats: readonly BgsGlobalHeroStat[], allCards: 
 	const result: BgsGlobalHeroStat = {
 		heroCardId: ref.heroCardId,
 		dataPoints: stats.map((stat) => stat.dataPoints).reduce((a, b) => a + b, 0),
-		averagePosition: averagePosition,
-		standardDeviation: standardDeviation,
-		standardDeviationOfTheMean: standardDeviationOfTheMean,
+		averagePosition: round(averagePosition),
+		standardDeviation: round(standardDeviation),
+		standardDeviationOfTheMean: round(standardDeviationOfTheMean),
 		conservativePositionEstimate: round(averagePosition + 3 * standardDeviationOfTheMean),
 		placementDistribution: mergePlacementDistributions(stats),
 		warbandStats: mergeWarbandStats(stats),
@@ -78,39 +78,125 @@ const mergeTribeStats = (
 const mergePlacementDistributions = (
 	stats: readonly BgsGlobalHeroStat[],
 ): readonly { rank: number; percentage: number }[] => {
+	const rawMerge = mergePlacementDistributionsRaw(stats);
 	const result: { rank: number; percentage: number }[] = [];
-	const totalDataPoints = stats.map((s) => s.dataPoints).reduce((a, b) => a + b, 0);
+	const totalDataPoints = rawMerge.map((s) => s.totalMatches).reduce((a, b) => a + b, 0);
 	for (let i = 1; i <= 8; i++) {
-		const total: number = stats
-			.map((s) => (s.placementDistribution[i]?.percentage ?? 0) * s.dataPoints)
-			.reduce((a, b) => a + b, 0);
+		const total: number = rawMerge.find((d) => d.rank === i)?.totalMatches ?? 0;
 		result.push({ rank: i, percentage: round((100 * total) / totalDataPoints) });
 	}
 	return result;
 };
 
-const mergeWarbandStats = (stats: readonly BgsGlobalHeroStat[]): readonly { turn: number; averageStats: number }[] => {
-	const result: { turn: number; averageStats: number }[] = [];
-	const totalDataPoints = stats.map((s) => s.dataPoints).reduce((a, b) => a + b, 0);
+const mergePlacementDistributionsRaw = (
+	stats: readonly BgsGlobalHeroStat[],
+): readonly { rank: number; totalMatches: number }[] => {
+	const rawStats = stats.map((stat) => stat.placementDistributionRaw);
+	// console.debug(
+	// 	'will merge placement distributions',
+	// 	stats[0].heroCardId,
+	// 	stats[0],
+	// 	rawStats.length,
+	// 	rawStats.filter((s) => !!s).length,
+	// );
+	// Legacy, can be removed after 2024-01-31
+	const pStats = stats
+		.filter((stat) => stat.placementDistribution?.length)
+		.map((stat) =>
+			stat.placementDistribution.map((s) => ({
+				rank: s.rank,
+				totalMatches: s.percentage * stat.dataPoints,
+			})),
+		);
+	const allRawStats = [...rawStats, ...pStats].filter((s) => !!s);
+	const result: { rank: number; totalMatches: number }[] = [];
 	for (let i = 1; i <= 8; i++) {
-		const total: number = stats
-			.map((s) => (s.warbandStats[i]?.averageStats ?? 0) * s.dataPoints)
+		const total: number = allRawStats
+			.map((d) => d?.find((info) => info.rank === i)?.totalMatches ?? 0)
 			.reduce((a, b) => a + b, 0);
-		result.push({ turn: i, averageStats: round(total / totalDataPoints) });
+		result.push({ rank: i, totalMatches: total });
 	}
 	return result;
 };
 
-const mergeCombatWinrate = (
-	stats: readonly BgsGlobalHeroStat[],
-): readonly { turn: number; dataPoints: number; winrate: number }[] => {
-	const result: { turn: number; dataPoints: number; winrate: number }[] = [];
-	const totalDataPoints = stats.map((s) => s.dataPoints).reduce((a, b) => a + b, 0);
-	for (let i = 1; i <= 8; i++) {
-		const total: number = stats
-			.map((s) => (s.combatWinrate[i]?.winrate ?? 0) * s.dataPoints)
-			.reduce((a, b) => a + b, 0);
-		result.push({ turn: i, dataPoints: totalDataPoints, winrate: round(total / totalDataPoints) });
+const mergeWarbandStats = (stats: readonly BgsGlobalHeroStat[]): readonly { turn: number; averageStats: number }[] => {
+	const { rawMerge, maxTurn } = mergeWarbandStatsRaw(stats);
+	const result: { turn: number; averageStats: number }[] = [];
+	const totalDataPoints = rawMerge.map((s) => s.dataPoints).reduce((a, b) => a + b, 0);
+	for (let i = 1; i <= maxTurn; i++) {
+		const totalStats: number = rawMerge.find((d) => d.turn === i)?.totalStats ?? 0;
+		result.push({ turn: i, averageStats: round(totalStats / totalDataPoints) });
 	}
 	return result;
+};
+
+const mergeWarbandStatsRaw = (
+	stats: readonly BgsGlobalHeroStat[],
+): { rawMerge: readonly { turn: number; dataPoints: number; totalStats: number }[]; maxTurn: number } => {
+	const rawStats = stats.map((stat) => stat.warbandStatsRaw).filter((s) => !!s?.length);
+	const pStats = stats
+		.filter((stat) => stat.warbandStats?.length)
+		.map((stat) =>
+			stat.warbandStats.map((s) => ({
+				turn: s.turn,
+				dataPoints: stat.dataPoints,
+				totalStats: s.averageStats * stat.dataPoints,
+			})),
+		);
+	const allRawStats = [...rawStats, ...pStats].filter((s) => !!s);
+	const result: { turn: number; dataPoints: number; totalStats: number }[] = [];
+	const maxTurn = Math.min(20, Math.max(...allRawStats.map((stat) => getMaxTurn(stat))));
+	for (let i = 1; i <= maxTurn; i++) {
+		const totalStats: number = allRawStats
+			.map((d) => d?.find((info) => info.turn === i)?.totalStats ?? 0)
+			.reduce((a, b) => a + b, 0);
+		const totalDataPoints = allRawStats
+			.map((d) => d?.find((info) => info.turn === i)?.dataPoints ?? 0)
+			.reduce((a, b) => a + b, 0);
+		result.push({ turn: i, totalStats: totalStats, dataPoints: totalDataPoints });
+	}
+	return { rawMerge: result, maxTurn: maxTurn };
+};
+
+const mergeCombatWinrate = (stats: readonly BgsGlobalHeroStat[]): readonly { turn: number; winrate: number }[] => {
+	const { rawMerge, maxTurn } = mergeCombatWinrateRaw(stats);
+	const result: { turn: number; winrate: number }[] = [];
+	const totalDataPoints = rawMerge.map((s) => s.dataPoints).reduce((a, b) => a + b, 0);
+	for (let i = 1; i <= maxTurn; i++) {
+		const totalWinrate: number = rawMerge.find((d) => d.turn === i)?.totalWinrate ?? 0;
+		result.push({ turn: i, winrate: round(totalWinrate / totalDataPoints) });
+	}
+	return result;
+};
+
+const mergeCombatWinrateRaw = (
+	stats: readonly BgsGlobalHeroStat[],
+): { rawMerge: readonly { turn: number; dataPoints: number; totalWinrate: number }[]; maxTurn: number } => {
+	const rawStats = stats.map((stat) => stat.combatWinrateRaw);
+	const pStats = stats
+		.filter((stat) => stat.combatWinrate?.length)
+		.map((stat) =>
+			stat.combatWinrate.map((s) => ({
+				turn: s.turn,
+				dataPoints: stat.dataPoints,
+				totalWinrate: s.winrate * stat.dataPoints,
+			})),
+		);
+	const allRawStats = [...rawStats, ...pStats].filter((s) => !!s);
+	const result: { turn: number; dataPoints: number; totalWinrate: number }[] = [];
+	const maxTurn = Math.min(20, Math.max(...allRawStats.map((stat) => getMaxTurn(stat))));
+	for (let i = 0; i <= maxTurn; i++) {
+		const totalWinrate: number = allRawStats
+			.map((d) => d?.find((info) => info.turn === i)?.totalWinrate ?? 0)
+			.reduce((a, b) => a + b, 0);
+		const totalDataPoints = allRawStats
+			.map((d) => d?.find((info) => info.turn === i)?.dataPoints ?? 0)
+			.reduce((a, b) => a + b, 0);
+		result.push({ turn: i, totalWinrate: totalWinrate, dataPoints: totalDataPoints });
+	}
+	return { rawMerge: result, maxTurn: maxTurn };
+};
+
+const getMaxTurn = (rawStats: readonly { turn: number }[]): number => {
+	return Math.max(...rawStats.map((stat) => stat.turn));
 };
