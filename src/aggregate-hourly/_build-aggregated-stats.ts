@@ -26,11 +26,11 @@ export default async (event, context: Context): Promise<any> => {
 	const timePeriod: TimePeriod = event.timePeriod;
 	const mmrPercentile: MmrPercentileFilter = event.mmrPercentile;
 
-	console.log('aggregating data', timePeriod, mmrPercentile);
+	// console.log('aggregating data', timePeriod, mmrPercentile);
 	// Build the list of files based on the timeframe, and load all of these
 	const patchInfo = await getLastBattlegroundsPatch();
 	const hourlyData: readonly BgsHeroStatsV2[] = await loadHourlyDataFromS3(timePeriod, mmrPercentile, patchInfo);
-	console.log('hourlyData', hourlyData.length);
+	// console.log('hourlyData', hourlyData.length);
 	const lastUpdate = hourlyData
 		.map((d) => ({
 			date: new Date(d.lastUpdateDate),
@@ -38,7 +38,7 @@ export default async (event, context: Context): Promise<any> => {
 			time: new Date(d.lastUpdateDate).getTime(),
 		}))
 		.sort((a, b) => b.time - a.time)[0].date;
-	console.log('loaded hourly data', lastUpdate);
+	// console.log('loaded hourly data', lastUpdate);
 
 	// Here it's ok that the MMR corresponding to each MMR percentile is not the same across all the hourly data chunks
 	// as the actual MMR evolves over time
@@ -49,13 +49,13 @@ export default async (event, context: Context): Promise<any> => {
 	// when building the hourly data
 	const mergedStats: readonly BgsGlobalHeroStat[] = mergeStats(hourlyData, mmrPercentile, allCards);
 	const mmrPercentiles: readonly MmrPercentile[] = buildMmrPercentiles(hourlyData);
-	console.log(
-		'mergedStats',
-		mergedStats?.map((s) => s.dataPoints).reduce((a, b) => a + b, 0),
-		mergedStats?.length,
-	);
+	// console.log(
+	// 	'mergedStats',
+	// 	mergedStats?.map((s) => s.dataPoints).reduce((a, b) => a + b, 0),
+	// 	mergedStats?.length,
+	// );
 	const testHeroStat = mergedStats.find((stat) => stat.heroCardId === 'BG21_HERO_010');
-	console.log('testHeroStat', testHeroStat, testHeroStat?.combatWinrate);
+	// console.log('testHeroStat', testHeroStat, testHeroStat?.combatWinrate);
 
 	await persistData(mergedStats, mmrPercentiles, lastUpdate, timePeriod, mmrPercentile);
 };
@@ -76,7 +76,7 @@ const dispatchEvents = async (context: Context) => {
 				LogType: 'Tail',
 				Payload: JSON.stringify(newEvent),
 			};
-			console.log('\tinvoking lambda', params);
+			// console.log('\tinvoking lambda', params);
 			const result = await lambda
 				.invoke({
 					FunctionName: context.functionName,
@@ -85,7 +85,7 @@ const dispatchEvents = async (context: Context) => {
 					Payload: JSON.stringify(newEvent),
 				})
 				.promise();
-			console.log('\tinvocation result', result);
+			// console.log('\tinvocation result', result);
 			await sleep(50);
 		}
 	}

@@ -1,4 +1,3 @@
-import { logger } from '@firestone-hs/aws-lambda-utils';
 import { AllCardsService } from '@firestone-hs/reference-data';
 import { gzipSync } from 'zlib';
 import { s3 } from '../build-battlegrounds-hero-stats-new';
@@ -36,7 +35,7 @@ export const handleStatsV2 = async (
 		heroStats: stats,
 		dataPoints: stats.map((s) => s.dataPoints).reduce((a, b) => a + b, 0),
 	};
-	logger.log('\tbuilt stats', statsV2.dataPoints, statsV2.heroStats?.length);
+	// logger.log('\tbuilt stats', statsV2.dataPoints, statsV2.heroStats?.length);
 	const timeSuffix = timePeriod;
 	await s3.writeFile(
 		gzipSync(JSON.stringify(statsV2)),

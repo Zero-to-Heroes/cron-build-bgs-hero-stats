@@ -164,17 +164,17 @@ const mergeCombatWinrateRaw = (
 	debug = false,
 ): { rawMerge: readonly { turn: number; dataPoints: number; totalWinrate: number }[]; maxTurn: number } => {
 	const rawStats = stats.map((stat) => stat.combatWinrateRaw).filter((stat) => !!stat?.length);
-	debug && console.log('rawStats', rawStats?.length, rawStats);
+	// debug && console.log('rawStats', rawStats?.length, rawStats);
 	const result: { turn: number; dataPoints: number; totalWinrate: number }[] = [];
 	const maxTurn = Math.min(20, Math.max(...rawStats.map((stat) => getMaxTurn(stat))));
-	debug && console.log('maxTurn', maxTurn);
+	// debug && console.log('maxTurn', maxTurn);
 	for (let i = 0; i <= maxTurn; i++) {
 		const rawStatsForTurn = rawStats.map((stat) => stat.find((info) => info.turn === i));
 		const totalWinrate: number = rawStatsForTurn.map((d) => d?.totalWinrate ?? 0).reduce((a, b) => a + b, 0);
 		const totalDataPoints = rawStatsForTurn.map((d) => d?.dataPoints ?? 0).reduce((a, b) => a + b, 0);
 		result.push({ turn: i, totalWinrate: totalWinrate, dataPoints: totalDataPoints });
 	}
-	debug && console.log('result', result);
+	// debug && console.log('result', result);
 	return { rawMerge: result, maxTurn: maxTurn };
 };
 

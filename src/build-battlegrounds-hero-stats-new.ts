@@ -31,7 +31,7 @@ export default async (event, context: Context): Promise<any> => {
 
 export const handleNewStats = async (event, context: Context) => {
 	const cleanup = logBeforeTimeout(context);
-	logger.log('event', event);
+	// logger.log('event', event);
 	await allCards.initializeCardsDb();
 	const lastPatch = await getLastBattlegroundsPatch();
 
@@ -67,7 +67,7 @@ const dispatchQuestsV2Lambda = async (context: Context) => {
 				LogType: 'Tail',
 				Payload: JSON.stringify(newEvent),
 			};
-			logger.log('\tinvoking lambda', params);
+			// logger.log('\tinvoking lambda', params);
 			const result = await lambda
 				.invoke({
 					FunctionName: context.functionName,
@@ -76,7 +76,7 @@ const dispatchQuestsV2Lambda = async (context: Context) => {
 					Payload: JSON.stringify(newEvent),
 				})
 				.promise();
-			logger.log('\tinvocation result', result);
+			// logger.log('\tinvocation result', result);
 		}
 	}
 };
@@ -95,7 +95,7 @@ const dispatchStatsV2Lambda = async (context: Context) => {
 				LogType: 'Tail',
 				Payload: JSON.stringify(newEvent),
 			};
-			logger.log('\tinvoking lambda', params);
+			// logger.log('\tinvoking lambda', params);
 			const result = await lambda
 				.invoke({
 					FunctionName: context.functionName,
@@ -104,7 +104,7 @@ const dispatchStatsV2Lambda = async (context: Context) => {
 					Payload: JSON.stringify(newEvent),
 				})
 				.promise();
-			logger.log('\tinvocation result', result);
+			// logger.log('\tinvocation result', result);
 		}
 	}
 };

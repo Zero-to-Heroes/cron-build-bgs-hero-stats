@@ -14,14 +14,14 @@ export const buildSplitStats = async <T>(
 	mmrPercentiles: readonly MmrPercentile[];
 }> => {
 	const rowsForTimePeriod = filterRowsForTimePeriod(rows, timePeriod, lastPatch);
-	console.log('rowsForTimePeriod', timePeriod, rowsForTimePeriod.length);
+	// console.log('rowsForTimePeriod', timePeriod, rowsForTimePeriod.length);
 	const mmrPercentiles: readonly MmrPercentile[] = buildMmrPercentiles(rowsForTimePeriod);
 	const mmrPercentile = mmrPercentiles.find((p) => p.percentile === percentile);
 	const result: WithMmrAndTimePeriod<T>[] = [];
 	const mmrRows = rowsForTimePeriod.filter(
 		(row) => mmrPercentile.percentile === 100 || row.rating >= mmrPercentile.mmr,
 	);
-	console.log('mmrRows', mmrRows.length, mmrPercentile.percentile, mmrPercentile.mmr);
+	// console.log('mmrRows', mmrRows.length, mmrPercentile.percentile, mmrPercentile.mmr);
 	result.push(
 		...statsBuilder(mmrRows).map((r) => ({
 			...r,

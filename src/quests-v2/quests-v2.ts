@@ -1,4 +1,3 @@
-import { logger } from '@firestone-hs/aws-lambda-utils';
 import { gzipSync } from 'zlib';
 import { s3 } from '../build-battlegrounds-hero-stats-new';
 import { PatchInfo } from '../common';
@@ -47,7 +46,7 @@ export const handleQuestsV2 = async (
 		rewardStats: rewardStats,
 		dataPoints: rowsWithQuests.length,
 	};
-	logger.log('\tbuilt stats', timePeriod, statsForQuests.dataPoints, statsForQuests.questStats?.length);
+	// logger.log('\tbuilt stats', timePeriod, statsForQuests.dataPoints, statsForQuests.questStats?.length);
 	const timeSuffix = timePeriod;
 	await s3.writeFile(
 		gzipSync(JSON.stringify(statsForQuests)),

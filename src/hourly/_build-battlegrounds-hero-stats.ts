@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
-import { S3, logBeforeTimeout, logger } from '@firestone-hs/aws-lambda-utils';
+import { S3, logBeforeTimeout } from '@firestone-hs/aws-lambda-utils';
 import { AllCardsService } from '@firestone-hs/reference-data';
 import { Context } from 'aws-lambda';
 import AWS from 'aws-sdk';
@@ -36,7 +36,7 @@ export const handleNewStats = async (event, context: Context) => {
 		// await handleQuestsV2(event.startDate, event.mmr, lastHourRows, lastPatch);
 	} else if (event.statsV2) {
 		const lastHourRows: readonly InternalBgsRow[] = await readRowsFromS3(event.startDate);
-		logger.log('building hero stats', event.startDate, lastHourRows?.length);
+		// logger.log('building hero stats', event.startDate, lastHourRows?.length);
 		await buildHeroStats(event.startDate, event.mmr, lastHourRows, allCards);
 	} else {
 		const startDate = new Date();
@@ -97,7 +97,7 @@ const dispatchStatsV2Lambda = async (context: Context, startDate: Date) => {
 			LogType: 'Tail',
 			Payload: JSON.stringify(newEvent),
 		};
-		logger.log('\tinvoking lambda', params);
+		// logger.log('\tinvoking lambda', params);
 		const result = await lambda
 			.invoke({
 				FunctionName: context.functionName,
