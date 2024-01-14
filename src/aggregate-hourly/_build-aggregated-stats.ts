@@ -1,4 +1,4 @@
-import { S3, getLastBattlegroundsPatch, sleep } from '@firestone-hs/aws-lambda-utils';
+import { S3, getLastBattlegroundsPatch, logBeforeTimeout, sleep } from '@firestone-hs/aws-lambda-utils';
 import { AllCardsService } from '@firestone-hs/reference-data';
 import { Context } from 'aws-lambda';
 import AWS from 'aws-sdk';
@@ -23,6 +23,7 @@ export default async (event, context: Context): Promise<any> => {
 		return;
 	}
 
+	const cleanup = logBeforeTimeout(context);
 	const timePeriod: TimePeriod = event.timePeriod;
 	const mmrPercentile: MmrPercentileFilter = event.mmrPercentile;
 
@@ -58,6 +59,7 @@ export default async (event, context: Context): Promise<any> => {
 	// console.log('testHeroStat', testHeroStat, testHeroStat?.combatWinrate);
 
 	await persistData(mergedStats, mmrPercentiles, lastUpdate, timePeriod, mmrPercentile);
+	cleanup();
 };
 
 const dispatchEvents = async (context: Context) => {
