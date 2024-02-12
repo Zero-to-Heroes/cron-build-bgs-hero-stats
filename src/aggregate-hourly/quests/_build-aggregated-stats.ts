@@ -2,18 +2,17 @@ import { S3, getLastBattlegroundsPatch, logBeforeTimeout, sleep } from '@firesto
 import { AllCardsService } from '@firestone-hs/reference-data';
 import { Context } from 'aws-lambda';
 import AWS from 'aws-sdk';
-import { STATS_KEY_PREFIX } from '../hourly/_build-battlegrounds-hero-stats';
-import { BgsGlobalHeroStat, BgsHeroStatsV2, MmrPercentile, MmrPercentileFilter, TimePeriod } from '../models';
-import { buildMmrPercentiles } from './percentiles';
-import { loadHourlyDataFromS3 } from './s3-loader';
+import { BgsGlobalQuestStat, BgsGlobalRewardStat, BgsQuestStats } from '../../model-quests';
+import { MmrPercentile, MmrPercentileFilter, TimePeriod } from '../../models';
+import { buildMmrPercentiles } from '../percentiles';
+import { loadHourlyDataFromS3 } from '../s3-loader';
+import { mergeQuestStats } from './quest-stats-merger';
+import { mergeRewardStats } from './reward-stats-merger';
 import { persistData } from './s3-saver';
-import { mergeStats } from './stats-merger';
 
 const allCards = new AllCardsService();
 export const s3 = new S3();
 const lambda = new AWS.Lambda();
-
-export const STAT_KEY = `${STATS_KEY_PREFIX}/hero-stats/mmr-%mmrPercentile%/%timePeriod%/overview-from-hourly.gz.json`;
 
 export default async (event, context: Context): Promise<any> => {
 	await allCards.initializeCardsDb();
@@ -30,7 +29,12 @@ export default async (event, context: Context): Promise<any> => {
 	// console.log('aggregating data', timePeriod, mmrPercentile);
 	// Build the list of files based on the timeframe, and load all of these
 	const patchInfo = await getLastBattlegroundsPatch();
-	const hourlyData: readonly BgsHeroStatsV2[] = await loadHourlyDataFromS3(timePeriod, mmrPercentile, patchInfo);
+	const hourlyData: readonly BgsQuestStats[] = await loadHourlyDataFromS3(
+		'quest',
+		timePeriod,
+		mmrPercentile,
+		patchInfo,
+	);
 	// console.log('hourlyData', hourlyData.length);
 	const lastUpdate = hourlyData
 		.map((d) => ({
@@ -48,17 +52,10 @@ export default async (event, context: Context): Promise<any> => {
 	// Empirically, it looks like there isn't much variation on a hour-by-hour basis, so it should be ok
 	// A possible solution, if this becomes an issue, is to compute the MMR percentiles on the full last day of data
 	// when building the hourly data
-	const mergedStats: readonly BgsGlobalHeroStat[] = mergeStats(hourlyData, mmrPercentile, allCards);
+	const mergedQuestStats: readonly BgsGlobalQuestStat[] = mergeQuestStats(hourlyData, mmrPercentile, allCards);
+	const mergedRewardStats: readonly BgsGlobalRewardStat[] = mergeRewardStats(hourlyData, mmrPercentile, allCards);
 	const mmrPercentiles: readonly MmrPercentile[] = buildMmrPercentiles(hourlyData);
-	// console.log(
-	// 	'mergedStats',
-	// 	mergedStats?.map((s) => s.dataPoints).reduce((a, b) => a + b, 0),
-	// 	mergedStats?.length,
-	// );
-	const testHeroStat = mergedStats.find((stat) => stat.heroCardId === 'BG21_HERO_010');
-	// console.log('testHeroStat', testHeroStat, testHeroStat?.combatWinrate);
-
-	await persistData(mergedStats, mmrPercentiles, lastUpdate, timePeriod, mmrPercentile);
+	await persistData(mergedQuestStats, mergedRewardStats, mmrPercentiles, lastUpdate, timePeriod, mmrPercentile);
 	cleanup();
 };
 

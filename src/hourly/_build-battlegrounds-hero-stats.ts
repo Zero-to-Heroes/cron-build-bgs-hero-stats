@@ -5,6 +5,7 @@ import { Context } from 'aws-lambda';
 import AWS from 'aws-sdk';
 import { InternalBgsRow } from '../internal-model';
 import { buildHeroStats } from './hero-stats';
+import { buildQuestStats } from './quest-stats';
 import { readRowsFromS3, saveRowsOnS3 } from './rows';
 
 export const s3 = new S3();
@@ -16,7 +17,8 @@ const allMmrPercentiles: (100 | 50 | 25 | 10 | 1)[] = [100, 50, 25, 10, 1];
 export const STATS_BUCKET = 'static.zerotoheroes.com';
 export const STATS_KEY_PREFIX = `api/bgs`;
 export const WORKING_ROWS_FILE = `${STATS_KEY_PREFIX}/working/working-rows-%time%.json`;
-export const HOURLY_KEY = `${STATS_KEY_PREFIX}/hero-stats/mmr-%mmrPercentile%/hourly/%startDate%.gz.json`;
+export const HOURLY_KEY_HERO = `${STATS_KEY_PREFIX}/hero-stats/mmr-%mmrPercentile%/hourly/%startDate%.gz.json`;
+export const HOURLY_KEY_QUEST = `${STATS_KEY_PREFIX}/quest-stats/mmr-%mmrPercentile%/hourly/%startDate%.gz.json`;
 
 // This example demonstrates a NodeJS 8.10 async handler[1], however of course you could use
 // the more traditional callback-style handler.
@@ -31,9 +33,9 @@ export const handleNewStats = async (event, context: Context) => {
 	await allCards.initializeCardsDb();
 
 	if (event.questsV2) {
-		// const lastHourRows: readonly InternalBgsRow[] = await readRowsFromS3(event.startDate);
+		const lastHourRows: readonly InternalBgsRow[] = await readRowsFromS3(event.startDate);
 		// logger.log('building quest stats', event.timePeriod, event.startDate, lastHourRows?.length);
-		// await handleQuestsV2(event.startDate, event.mmr, lastHourRows, lastPatch);
+		await buildQuestStats(event.startDate, event.mmr, lastHourRows, allCards, s3);
 	} else if (event.statsV2) {
 		const lastHourRows: readonly InternalBgsRow[] = await readRowsFromS3(event.startDate);
 		// logger.log('building hero stats', event.startDate, lastHourRows?.length);
@@ -51,7 +53,7 @@ export const handleNewStats = async (event, context: Context) => {
 
 		await saveRowsOnS3(startDate, endDate, allCards);
 		await dispatchStatsV2Lambda(context, startDate);
-		// await dispatchQuestsV2Lambda(context, startDate);
+		await dispatchQuestsV2Lambda(context, startDate);
 	}
 
 	cleanup();

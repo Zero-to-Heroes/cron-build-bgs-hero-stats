@@ -1,6 +1,5 @@
 import { Race } from '@firestone-hs/reference-data';
-import { MmrPercentile } from '../models';
-import { WithMmrAndTimePeriod } from './charged-stat';
+import { MmrPercentile, WithMmrAndTimePeriod } from './models';
 
 export interface BgsQuestStats {
 	readonly lastUpdateDate: Date;

@@ -1,6 +1,6 @@
-import { MmrPercentile } from '../bgs-global-stats';
 import { buildMmrPercentiles, filterRowsForTimePeriod, PatchInfo } from '../common';
 import { InternalBgsRow } from '../internal-model';
+import { MmrPercentile } from '../models';
 import { WithMmrAndTimePeriod } from './charged-stat';
 
 export const buildSplitStats = async <T>(

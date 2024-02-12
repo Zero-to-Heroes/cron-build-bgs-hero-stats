@@ -1,7 +1,8 @@
 import { gzipSync } from 'zlib';
-import { STATS_BUCKET } from '../hourly/_build-battlegrounds-hero-stats';
-import { BgsGlobalHeroStat, BgsHeroStatsV2, MmrPercentile, MmrPercentileFilter, TimePeriod } from '../models';
-import { STAT_KEY, s3 } from './_build-aggregated-stats';
+import { STATS_BUCKET } from '../../hourly/_build-battlegrounds-hero-stats';
+import { BgsGlobalHeroStat, BgsHeroStatsV2, MmrPercentile, MmrPercentileFilter, TimePeriod } from '../../models';
+import { STAT_KEY_HERO } from '../config';
+import { s3 } from './_build-aggregated-stats';
 
 export const persistData = async (
 	mergedStats: readonly BgsGlobalHeroStat[],
@@ -24,7 +25,7 @@ export const persistData = async (
 	await s3.writeFile(
 		gzipSync(JSON.stringify(stat)),
 		STATS_BUCKET,
-		STAT_KEY.replace('%mmrPercentile%', `${mmrPercentile}`).replace('%timePeriod%', timePeriod),
+		STAT_KEY_HERO.replace('%mmrPercentile%', `${mmrPercentile}`).replace('%timePeriod%', timePeriod),
 		'application/json',
 		'gzip',
 	);

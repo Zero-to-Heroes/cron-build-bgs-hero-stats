@@ -1,28 +1,6 @@
 import { Race } from '@firestone-hs/reference-data';
+import { MmrPercentile } from './models';
 
-export class BgsGlobalStats {
-	lastUpdateDate: string;
-	heroStats: readonly BgsGlobalHeroStat[];
-}
-
-export class BgsGlobalHeroStat {
-	id: string;
-	popularity: number;
-	averagePosition: number;
-	top4: number;
-	top1: number;
-	tier: BgsHeroTier;
-	totalGames: number;
-	tribesStat: readonly { tribe: string; percent: number }[];
-	warbandStats: readonly { turn: number; totalStats: number }[];
-	combatWinrate: readonly { turn: number; winrate: number }[];
-}
-
-export type BgsHeroTier = 'S' | 'A' | 'B' | 'C' | 'D';
-
-// ===============================
-// New stats
-// =================================
 export class BgsGlobalStats2 {
 	readonly lastUpdateDate: string;
 	readonly mmrPercentiles: readonly MmrPercentile[];
@@ -45,11 +23,6 @@ export class BgsGlobalHeroStat2 {
 	readonly combatWinrate: readonly { turn: number; dataPoints: number; totalWinrate: number }[];
 	// Same
 	readonly warbandStats: readonly { turn: number; dataPoints: number; totalStats: number }[];
-}
-
-export interface MmrPercentile {
-	readonly mmr: number;
-	readonly percentile: 100 | 50 | 25 | 10 | 1;
 }
 
 export * from './quests-v2/bgs-quest-stat';
