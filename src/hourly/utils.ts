@@ -1,6 +1,6 @@
-import { PatchInfo } from '@firestone-hs/aws-lambda-utils';
-import { MmrPercentile } from '../bgs-global-stats';
+import { PatchInfo, groupByFunction } from '@firestone-hs/aws-lambda-utils';
 import { InternalBgsRow } from '../internal-model';
+import { MmrPercentile } from '../public-api';
 
 export const filterRowsForTimePeriod = (
 	rows: readonly InternalBgsRow[],
@@ -55,4 +55,17 @@ export const buildMmrPercentiles = (rows: readonly InternalBgsRow[]): readonly M
 			mmr: top1,
 		},
 	];
+};
+
+export const buildPlacementDistribution = (
+	rows: readonly InternalBgsRow[],
+): readonly { rank: number; totalMatches: number }[] => {
+	const placementDistribution: { rank: number; totalMatches: number }[] = [];
+	const groupedByPlacement: { [placement: string]: readonly InternalBgsRow[] } = groupByFunction(
+		(res: InternalBgsRow) => '' + res.rank,
+	)(rows);
+	Object.keys(groupedByPlacement).forEach((placement) =>
+		placementDistribution.push({ rank: +placement, totalMatches: groupedByPlacement[placement].length }),
+	);
+	return placementDistribution;
 };

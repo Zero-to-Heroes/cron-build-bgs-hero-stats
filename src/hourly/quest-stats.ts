@@ -1,13 +1,13 @@
 import { S3 } from '@firestone-hs/aws-lambda-utils';
 import { AllCardsService } from '@firestone-hs/reference-data';
 import { gzipSync } from 'zlib';
-import { buildMmrPercentiles } from '../common';
 import { InternalBgsRow } from '../internal-model';
 import { BgsGlobalQuestStat, BgsGlobalRewardStat, BgsQuestStats } from '../model-quests';
 import { MmrPercentile } from '../models';
 import { HOURLY_KEY_QUEST, STATS_BUCKET } from './_build-battlegrounds-hero-stats';
 import { buildQuestStatsForMmr } from './quests/quest-stats-buikder';
 import { buildRewardStatsForMmr } from './quests/reward-stats-builder';
+import { buildMmrPercentiles } from './utils';
 
 export const buildQuestStats = async (
 	startDate: string,

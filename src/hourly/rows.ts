@@ -4,8 +4,8 @@ import { S3 as S3AWS } from 'aws-sdk';
 import SecretsManager, { GetSecretValueRequest, GetSecretValueResponse } from 'aws-sdk/clients/secretsmanager';
 import { Connection, createPool } from 'mysql';
 import { Readable } from 'stream';
+import { normalizeHeroCardId } from '../common/util-functions';
 import { InternalBgsRow } from '../internal-model';
-import { normalizeHeroCardId } from '../utils/util-functions';
 import { STATS_BUCKET, WORKING_ROWS_FILE, s3 } from './_build-battlegrounds-hero-stats';
 
 export const readRowsFromS3 = async (startDate: string): Promise<readonly InternalBgsRow[]> => {

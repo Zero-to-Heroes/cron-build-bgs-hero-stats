@@ -1,10 +1,10 @@
 import { groupByFunction } from '@firestone-hs/aws-lambda-utils';
 import { AllCardsService, Race } from '@firestone-hs/reference-data';
-import { buildPlacementDistribution } from '../common';
+import { normalizeHeroCardId, round } from '../common/util-functions';
 import { InternalBgsRow } from '../internal-model';
 import { BgsGlobalHeroStat, BgsHeroTribeStat } from '../models';
-import { normalizeHeroCardId, round } from '../utils/util-functions';
 import { buildCombatWinrate, buildWarbandStats } from './builders';
+import { buildPlacementDistribution } from './utils';
 
 export const buildHeroStatsForMmr = (
 	rows: readonly InternalBgsRow[],

@@ -89,3 +89,30 @@ Resources:
                     Type: Schedule
                     Properties:
                         Schedule: cron(55 * * * ? *)
+    AggregateHourlyQuestStats2:
+        Type: AWS::Serverless::Function
+        Properties:
+            Handler: aggregate-hourly/quests/_build-aggregated-stats.default
+            Runtime: nodejs18.x
+            Timeout: 880
+            CodeUri: ./dist/aggregate-hourly/quests/_build-aggregated-stats
+            MemorySize: 4000
+            ReservedConcurrentExecutions: 10
+            Layers:
+                - !Sub "arn:aws:lambda:${AWS::Region}:580247275435:layer:LambdaInsightsExtension:14"
+            Policies:
+                - AWSLambdaVPCAccessExecutionRole
+                - AmazonSESFullAccess
+                - SecretsManagerReadWrite
+                - AmazonSNSReadOnlyAccess
+                - AmazonS3FullAccess
+                - AWSLambda_FullAccess
+                - arn:aws:iam::aws:policy/CloudWatchLambdaInsightsExecutionRolePolicy
+                # - arn:aws:iam::478062583808:policy/CloudWatchPolicyForLambda # See https://stackoverflow.com/questions/51166504/disable-cloudwatch-to-monitor-logs-for-lambda-function
+            Tags:
+                LambdaName: cron-aggregate-hourly-bgs-quest-stats
+            Events:
+                LastPeriodTrigger:
+                    Type: Schedule
+                    Properties:
+                        Schedule: cron(50 * * * ? *)

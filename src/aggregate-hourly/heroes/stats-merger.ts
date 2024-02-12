@@ -1,7 +1,7 @@
 import { groupByFunction } from '@firestone-hs/aws-lambda-utils';
 import { AllCardsService, CardIds } from '@firestone-hs/reference-data';
+import { round } from '../../common/util-functions';
 import { BgsGlobalHeroStat, BgsHeroStatsV2, BgsHeroTribeStat, MmrPercentileFilter } from '../../models';
-import { round } from '../../utils/util-functions';
 
 export const mergeStats = (
 	hourlyData: readonly BgsHeroStatsV2[],

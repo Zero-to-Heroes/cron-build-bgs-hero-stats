@@ -14,8 +14,8 @@
 	"author": "",
 	"license": "MIT",
 	"private": false,
-	"main": "dist/bgs-global-stats.js",
-	"types": "dist/bgs-global-stats.d.ts",
+	"main": "dist/public-api.js",
+	"types": "dist/public-api.d.ts",
 	"files": [
 		"dist/**/*"
 	],
