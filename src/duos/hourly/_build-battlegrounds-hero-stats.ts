@@ -1,0 +1,78 @@
+/* eslint-disable @typescript-eslint/no-use-before-define */
+import { S3, logBeforeTimeout } from '@firestone-hs/aws-lambda-utils';
+import { AllCardsService } from '@firestone-hs/reference-data';
+import { Context } from 'aws-lambda';
+import AWS from 'aws-sdk';
+import { InternalBgsRow } from '../../internal-model';
+import { buildHeroStats } from './hero-stats';
+import { readRowsFromS3, saveRowsOnS3 } from './rows';
+
+export const s3 = new S3();
+const allCards = new AllCardsService();
+const lambda = new AWS.Lambda();
+
+const allMmrPercentiles: (100 | 50 | 25 | 10 | 1)[] = [100, 50, 25, 10, 1];
+
+export const STATS_BUCKET = 'static.zerotoheroes.com';
+export const STATS_KEY_PREFIX = `api/bgs/duo`;
+export const WORKING_ROWS_FILE = `${STATS_KEY_PREFIX}/working/working-rows-%time%.json`;
+export const HOURLY_KEY_HERO = `${STATS_KEY_PREFIX}/hero-stats/mmr-%mmrPercentile%/hourly/%startDate%.gz.json`;
+export const HOURLY_KEY_QUEST = `${STATS_KEY_PREFIX}/quest-stats/mmr-%mmrPercentile%/hourly/%startDate%.gz.json`;
+
+export default async (event, context: Context): Promise<any> => {
+	await handleNewStats(event, context);
+};
+
+export const handleNewStats = async (event, context: Context) => {
+	const cleanup = logBeforeTimeout(context);
+	// logger.log('event', event);
+	await allCards.initializeCardsDb();
+
+	if (event.statsV2) {
+		const lastHourRows: readonly InternalBgsRow[] = await readRowsFromS3(event.startDate);
+		// logger.log('building hero stats', event.startDate, lastHourRows?.length);
+		await buildHeroStats(event.startDate, event.mmr, lastHourRows, allCards);
+	} else {
+		const startDate = new Date();
+		startDate.setMinutes(0);
+		startDate.setSeconds(0);
+		startDate.setMilliseconds(0);
+		startDate.setHours(startDate.getHours() - 1);
+		// console.log('processStartDate', startDate);
+		// End one hour later
+		const endDate = new Date(startDate);
+		endDate.setHours(endDate.getHours() + 1);
+
+		await saveRowsOnS3(startDate, endDate, allCards);
+		await dispatchStatsV2Lambda(context, startDate);
+	}
+
+	cleanup();
+	return { statusCode: 200, body: null };
+};
+
+const dispatchStatsV2Lambda = async (context: Context, startDate: Date) => {
+	for (const mmr of allMmrPercentiles) {
+		const newEvent = {
+			statsV2: true,
+			mmr: mmr,
+			startDate: startDate,
+		};
+		const params = {
+			FunctionName: context.functionName,
+			InvocationType: 'Event',
+			LogType: 'Tail',
+			Payload: JSON.stringify(newEvent),
+		};
+		// logger.log('\tinvoking lambda', params);
+		const result = await lambda
+			.invoke({
+				FunctionName: context.functionName,
+				InvocationType: 'Event',
+				LogType: 'Tail',
+				Payload: JSON.stringify(newEvent),
+			})
+			.promise();
+		// logger.log('\tinvocation result', result);
+	}
+};

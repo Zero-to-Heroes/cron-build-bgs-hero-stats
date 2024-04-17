@@ -5,41 +5,13 @@ Transform: AWS::Serverless-2016-10-31
 Description: Lambda function that builds Battlegrounds hero stats on a regular schedule
 
 Resources:
-    # BuildBgsHeroStatsFunction:
-    #     Type: AWS::Serverless::Function
-    #     Properties:
-    #         Handler: build-battlegrounds-hero-stats-new.default
-    #         Runtime: nodejs18.x
-    #         Timeout: 880
-    #         CodeUri: ./dist/build-battlegrounds-hero-stats-new
-    #         MemorySize: 8000
-    #         ReservedConcurrentExecutions: 5
-    #         # Layers:
-    #         #     - !Sub "arn:aws:lambda:${AWS::Region}:580247275435:layer:LambdaInsightsExtension:14"
-    #         Policies:
-    #             - AWSLambdaVPCAccessExecutionRole
-    #             - AmazonSESFullAccess
-    #             - SecretsManagerReadWrite
-    #             - AmazonSNSReadOnlyAccess
-    #             - AmazonS3FullAccess
-    #             - AWSLambda_FullAccess
-    #             - arn:aws:iam::aws:policy/CloudWatchLambdaInsightsExecutionRolePolicy
-    #             - arn:aws:iam::478062583808:policy/CloudWatchPolicyForLambda # See https://stackoverflow.com/questions/51166504/disable-cloudwatch-to-monitor-logs-for-lambda-function
-    #         Tags:
-    #             LambdaName: cron-build-bgs-hero-stats
-    #         Events:
-    #             # Populate the info on the last hour
-    #             LastPeriodTrigger:
-    #                 Type: Schedule
-    #                 Properties:
-    #                     Schedule: cron(0 14 * * ? *) # Triggers every day at 14 AM
     BuildHourlyHeroStats2:
         Type: AWS::Serverless::Function
         Properties:
-            Handler: hourly/_build-battlegrounds-hero-stats.default
+            Handler: solo/hourly/_build-battlegrounds-hero-stats.default
             Runtime: nodejs18.x
             Timeout: 880
-            CodeUri: ./dist/hourly/_build-battlegrounds-hero-stats
+            CodeUri: ./dist/solo/hourly/_build-battlegrounds-hero-stats
             MemorySize: 4000
             ReservedConcurrentExecutions: 10
             Layers:
@@ -65,10 +37,10 @@ Resources:
     AggregateHourlyHeroStats2:
         Type: AWS::Serverless::Function
         Properties:
-            Handler: aggregate-hourly/heroes/_build-aggregated-stats.default
+            Handler: solo/aggregate-hourly/heroes/_build-aggregated-stats.default
             Runtime: nodejs18.x
             Timeout: 880
-            CodeUri: ./dist/aggregate-hourly/heroes/_build-aggregated-stats
+            CodeUri: ./dist/solo/aggregate-hourly/heroes/_build-aggregated-stats
             MemorySize: 4000
             ReservedConcurrentExecutions: 10
             Layers:
@@ -92,10 +64,10 @@ Resources:
     AggregateHourlyQuestStats2:
         Type: AWS::Serverless::Function
         Properties:
-            Handler: aggregate-hourly/quests/_build-aggregated-stats.default
+            Handler: solo/aggregate-hourly/quests/_build-aggregated-stats.default
             Runtime: nodejs18.x
             Timeout: 880
-            CodeUri: ./dist/aggregate-hourly/quests/_build-aggregated-stats
+            CodeUri: ./dist/solo/aggregate-hourly/quests/_build-aggregated-stats
             MemorySize: 4000
             ReservedConcurrentExecutions: 10
             Layers:
@@ -116,3 +88,59 @@ Resources:
                     Type: Schedule
                     Properties:
                         Schedule: cron(50 * * * ? *)
+    BuildHourlyHeroStatsDuos:
+        Type: AWS::Serverless::Function
+        Properties:
+            Handler: duos/hourly/_build-battlegrounds-hero-stats.default
+            Runtime: nodejs18.x
+            Timeout: 880
+            CodeUri: ./dist/duos/hourly/_build-battlegrounds-hero-stats
+            MemorySize: 4000
+            ReservedConcurrentExecutions: 10
+            Layers:
+                - !Sub "arn:aws:lambda:${AWS::Region}:580247275435:layer:LambdaInsightsExtension:14"
+            Policies:
+                - AWSLambdaVPCAccessExecutionRole
+                - AmazonSESFullAccess
+                - SecretsManagerReadWrite
+                - AmazonSNSReadOnlyAccess
+                - AmazonS3FullAccess
+                - AWSLambda_FullAccess
+                - arn:aws:iam::aws:policy/CloudWatchLambdaInsightsExecutionRolePolicy
+                # - arn:aws:iam::478062583808:policy/CloudWatchPolicyForLambda # See https://stackoverflow.com/questions/51166504/disable-cloudwatch-to-monitor-logs-for-lambda-function
+            Tags:
+                LambdaName: cron-build-hourly-bgs-hero-stats-duos
+            Events:
+                # Populate the info on the last hour
+                LastPeriodTrigger:
+                    Type: Schedule
+                    Properties:
+                        # Cron that runs every hour at 10 minutes past the hour
+                        Schedule: cron(20 * * * ? *)
+    AggregateHourlyHeroStatsDuos:
+        Type: AWS::Serverless::Function
+        Properties:
+            Handler: duos/aggregate-hourly/heroes/_build-aggregated-stats.default
+            Runtime: nodejs18.x
+            Timeout: 880
+            CodeUri: ./dist/duos/aggregate-hourly/heroes/_build-aggregated-stats
+            MemorySize: 4000
+            ReservedConcurrentExecutions: 10
+            Layers:
+                - !Sub "arn:aws:lambda:${AWS::Region}:580247275435:layer:LambdaInsightsExtension:14"
+            Policies:
+                - AWSLambdaVPCAccessExecutionRole
+                - AmazonSESFullAccess
+                - SecretsManagerReadWrite
+                - AmazonSNSReadOnlyAccess
+                - AmazonS3FullAccess
+                - AWSLambda_FullAccess
+                - arn:aws:iam::aws:policy/CloudWatchLambdaInsightsExecutionRolePolicy
+                # - arn:aws:iam::478062583808:policy/CloudWatchPolicyForLambda # See https://stackoverflow.com/questions/51166504/disable-cloudwatch-to-monitor-logs-for-lambda-function
+            Tags:
+                LambdaName: cron-aggregate-hourly-bgs-hero-stats-duos
+            Events:
+                LastPeriodTrigger:
+                    Type: Schedule
+                    Properties:
+                        Schedule: cron(45 * * * ? *)
