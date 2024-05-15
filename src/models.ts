@@ -30,6 +30,7 @@ export interface BgsHeroTribeStat {
 	readonly dataPointsOnMissingTribe: number;
 	readonly averagePosition: number;
 	readonly impactAveragePosition: number;
+	readonly impactAveragePositionVsMissingTribe: number;
 	// readonly placementDistribution: readonly { rank: number; percentage: number }[];
 	// readonly impactPlacementDistribution: readonly { rank: number; impact: number }[];
 	// readonly combatWinrate: readonly { turn: number; winrate: number }[];

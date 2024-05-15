@@ -75,12 +75,14 @@ const buildTribeStats = (rows: readonly InternalBgsRow[], refAveragePosition: nu
 		const rowsForTribe = rows.filter((r) => r.tribesExpanded.includes(tribe));
 		const rowsWithoutTribe = rows.filter((r) => !r.tribesExpanded.includes(tribe));
 		const averagePosition = average(rowsForTribe.map((r) => r.rank));
+		const averagePositionWithoutTribe = average(rowsWithoutTribe.map((r) => r.rank));
 		const result: BgsHeroTribeStat = {
 			tribe: tribe,
 			dataPoints: rowsForTribe.length,
 			dataPointsOnMissingTribe: rowsWithoutTribe.length,
 			averagePosition: round(averagePosition),
 			impactAveragePosition: round(averagePosition - refAveragePosition),
+			impactAveragePositionVsMissingTribe: round(averagePosition - averagePositionWithoutTribe),
 		};
 		return result;
 	});

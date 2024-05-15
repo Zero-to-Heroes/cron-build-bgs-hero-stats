@@ -64,6 +64,13 @@ const mergeTribeStats = (
 		const averagePosition =
 			tribeStats.map((stat) => stat.averagePosition * stat.dataPoints).reduce((a, b) => a + b, 0) /
 			tribeStats.map((stat) => stat.dataPoints).reduce((a, b) => a + b, 0);
+		const impactAveragePosition =
+			tribeStats.map((stat) => stat.impactAveragePosition * stat.dataPoints).reduce((a, b) => a + b, 0) /
+			tribeStats.map((stat) => stat.dataPoints).reduce((a, b) => a + b, 0);
+		const impactAveragePositionVsMissingTribe =
+			tribeStats
+				.map((stat) => stat.impactAveragePositionVsMissingTribe * stat.dataPoints)
+				.reduce((a, b) => a + b, 0) / tribeStats.map((stat) => stat.dataPoints).reduce((a, b) => a + b, 0);
 		return {
 			tribe: tribe,
 			dataPoints: tribeStats.map((stat) => stat.dataPoints).reduce((a, b) => a + b, 0),
@@ -72,6 +79,8 @@ const mergeTribeStats = (
 				.reduce((a, b) => a + b, 0),
 			averagePosition: round(averagePosition),
 			impactAveragePosition: round(averagePosition - refAveragePosition),
+			impactAveragePositionDebug: round(impactAveragePosition),
+			impactAveragePositionVsMissingTribe: round(impactAveragePositionVsMissingTribe),
 		};
 	});
 	return result;
