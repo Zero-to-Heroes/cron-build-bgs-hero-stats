@@ -47,7 +47,9 @@ const mergeStatsForSingleHero = (stats: readonly BgsGlobalHeroStat[], allCards: 
 		placementDistribution: mergePlacementDistributions(stats),
 		warbandStats: mergeWarbandStats(stats),
 		combatWinrate: mergeCombatWinrate(stats, debug),
-		tribeStats: mergeTribeStats(stats, averagePosition),
+		tribeStats: mergeTribeStats(stats, averagePosition).filter(
+			(s) => s.dataPointsOnMissingTribe > s.dataPoints / 20,
+		),
 		anomalyStats: [], // mergeAnomalyStats(stats),
 	};
 	return result;
@@ -64,13 +66,18 @@ const mergeTribeStats = (
 		const averagePosition =
 			tribeStats.map((stat) => stat.averagePosition * stat.dataPoints).reduce((a, b) => a + b, 0) /
 			tribeStats.map((stat) => stat.dataPoints).reduce((a, b) => a + b, 0);
-		const impactAveragePosition =
-			tribeStats.map((stat) => stat.impactAveragePosition * stat.dataPoints).reduce((a, b) => a + b, 0) /
-			tribeStats.map((stat) => stat.dataPoints).reduce((a, b) => a + b, 0);
-		const impactAveragePositionVsMissingTribe =
+		const averagePositionWithoutTribe =
 			tribeStats
-				.map((stat) => stat.impactAveragePositionVsMissingTribe * stat.dataPoints)
-				.reduce((a, b) => a + b, 0) / tribeStats.map((stat) => stat.dataPoints).reduce((a, b) => a + b, 0);
+				.map((stat) => stat.averagePositionWithoutTribe * stat.dataPointsOnMissingTribe)
+				.reduce((a, b) => a + b, 0) /
+			tribeStats.map((stat) => stat.dataPointsOnMissingTribe).reduce((a, b) => a + b, 0);
+		// const impactAveragePosition =
+		// 	tribeStats.map((stat) => stat.impactAveragePosition * stat.dataPoints).reduce((a, b) => a + b, 0) /
+		// 	tribeStats.map((stat) => stat.dataPoints).reduce((a, b) => a + b, 0);
+		// const impactAveragePositionVsMissingTribe =
+		// 	tribeStats
+		// 		.map((stat) => stat.impactAveragePositionVsMissingTribe * stat.dataPoints)
+		// 		.reduce((a, b) => a + b, 0) / tribeStats.map((stat) => stat.dataPoints).reduce((a, b) => a + b, 0);
 		return {
 			tribe: tribe,
 			dataPoints: tribeStats.map((stat) => stat.dataPoints).reduce((a, b) => a + b, 0),
@@ -78,9 +85,11 @@ const mergeTribeStats = (
 				.map((stat) => stat.dataPointsOnMissingTribe)
 				.reduce((a, b) => a + b, 0),
 			averagePosition: round(averagePosition),
+			averagePositionWithoutTribe: round(averagePositionWithoutTribe),
+			refAveragePosition: round(refAveragePosition),
 			impactAveragePosition: round(averagePosition - refAveragePosition),
-			impactAveragePositionDebug: round(impactAveragePosition),
-			impactAveragePositionVsMissingTribe: round(impactAveragePositionVsMissingTribe),
+			// impactAveragePositionDebug: round(impactAveragePosition),
+			impactAveragePositionVsMissingTribe: round(averagePositionWithoutTribe - refAveragePosition),
 		};
 	});
 	return result;

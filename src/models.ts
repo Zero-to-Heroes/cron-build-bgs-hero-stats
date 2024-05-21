@@ -29,6 +29,8 @@ export interface BgsHeroTribeStat {
 	readonly dataPoints: number;
 	readonly dataPointsOnMissingTribe: number;
 	readonly averagePosition: number;
+	readonly averagePositionWithoutTribe: number;
+	// Impacts are only meant to be used in the final output
 	readonly impactAveragePosition: number;
 	readonly impactAveragePositionVsMissingTribe: number;
 	// readonly placementDistribution: readonly { rank: number; percentage: number }[];

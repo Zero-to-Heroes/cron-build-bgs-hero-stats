@@ -80,9 +80,10 @@ const buildTribeStats = (rows: readonly InternalBgsRow[], refAveragePosition: nu
 			tribe: tribe,
 			dataPoints: rowsForTribe.length,
 			dataPointsOnMissingTribe: rowsWithoutTribe.length,
-			averagePosition: round(averagePosition),
-			impactAveragePosition: round(averagePosition - refAveragePosition),
-			impactAveragePositionVsMissingTribe: round(averagePosition - averagePositionWithoutTribe),
+			averagePosition: averagePosition,
+			averagePositionWithoutTribe: averagePositionWithoutTribe,
+			impactAveragePosition: averagePosition - refAveragePosition,
+			impactAveragePositionVsMissingTribe: averagePosition - averagePositionWithoutTribe,
 		};
 		return result;
 	});
