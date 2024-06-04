@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-use-before-define */
-import { S3, logBeforeTimeout } from '@firestone-hs/aws-lambda-utils';
+import { S3, logBeforeTimeout, sleep } from '@firestone-hs/aws-lambda-utils';
 import { AllCardsService } from '@firestone-hs/reference-data';
 import { Context } from 'aws-lambda';
 import AWS from 'aws-sdk';
@@ -28,27 +28,83 @@ export const handleNewStats = async (event, context: Context) => {
 	// logger.log('event', event);
 	await allCards.initializeCardsDb();
 
+	if (event.catchUp) {
+		await dispatchCatchUpEvents(context, +event.catchUp);
+		cleanup();
+		return;
+	}
+
+	if (!event.statsV2 && !event.questsV2) {
+		await dispatchMainEvents(context, event);
+		cleanup();
+		return;
+	}
+
+	// if (event.questsV2) {
+	// 	const lastHourRows: readonly InternalBgsRow[] = await readRowsFromS3(event.startDate);
+	// 	// logger.log('building quest stats', event.timePeriod, event.startDate, lastHourRows?.length);
+	// 	await buildQuestStats(event.startDate, event.mmr, lastHourRows, allCards, s3);
+	// } else
 	if (event.statsV2) {
 		const lastHourRows: readonly InternalBgsRow[] = await readRowsFromS3(event.startDate);
 		// logger.log('building hero stats', event.startDate, lastHourRows?.length);
 		await buildHeroStats(event.startDate, event.mmr, lastHourRows, allCards);
-	} else {
-		const startDate = new Date();
-		startDate.setMinutes(0);
-		startDate.setSeconds(0);
-		startDate.setMilliseconds(0);
-		startDate.setHours(startDate.getHours() - 1);
-		// console.log('processStartDate', startDate);
-		// End one hour later
-		const endDate = new Date(startDate);
-		endDate.setHours(endDate.getHours() + 1);
-
-		await saveRowsOnS3(startDate, endDate, allCards);
-		await dispatchStatsV2Lambda(context, startDate);
 	}
 
 	cleanup();
-	return { statusCode: 200, body: null };
+};
+
+const dispatchMainEvents = async (context: Context, event) => {
+	const startDate = buildProcessStartDate(event);
+	// End one hour later
+	const endDate = new Date(startDate);
+	endDate.setHours(endDate.getHours() + 1);
+
+	await saveRowsOnS3(startDate, endDate, allCards);
+
+	await dispatchStatsV2Lambda(context, startDate);
+	// await dispatchQuestsV2Lambda(context, startDate);
+};
+
+const buildProcessStartDate = (event): Date => {
+	if (event?.targetDate) {
+		const targetDate = new Date(event.targetDate);
+		return targetDate;
+	}
+
+	// Start from the start of the current hour
+	const processStartDate = new Date();
+	processStartDate.setMinutes(0);
+	processStartDate.setSeconds(0);
+	processStartDate.setMilliseconds(0);
+	processStartDate.setHours(processStartDate.getHours() - 1);
+	return processStartDate;
+};
+
+const dispatchQuestsV2Lambda = async (context: Context, startDate: Date) => {
+	for (const mmr of allMmrPercentiles) {
+		const newEvent = {
+			questsV2: true,
+			mmr: mmr,
+			startDate: startDate,
+		};
+		const params = {
+			FunctionName: context.functionName,
+			InvocationType: 'Event',
+			LogType: 'Tail',
+			Payload: JSON.stringify(newEvent),
+		};
+		console.log('\tinvoking lambda', params);
+		const result = await lambda
+			.invoke({
+				FunctionName: context.functionName,
+				InvocationType: 'Event',
+				LogType: 'Tail',
+				Payload: JSON.stringify(newEvent),
+			})
+			.promise();
+		// logger.log('\tinvocation result', result);
+	}
 };
 
 const dispatchStatsV2Lambda = async (context: Context, startDate: Date) => {
@@ -64,7 +120,7 @@ const dispatchStatsV2Lambda = async (context: Context, startDate: Date) => {
 			LogType: 'Tail',
 			Payload: JSON.stringify(newEvent),
 		};
-		// logger.log('\tinvoking lambda', params);
+		console.log('\tinvoking lambda', params);
 		const result = await lambda
 			.invoke({
 				FunctionName: context.functionName,
@@ -74,5 +130,43 @@ const dispatchStatsV2Lambda = async (context: Context, startDate: Date) => {
 			})
 			.promise();
 		// logger.log('\tinvocation result', result);
+	}
+};
+
+const dispatchCatchUpEvents = async (context: Context, daysInThePast: number) => {
+	// Build a list of hours for the last `daysInThePast` days, in the format YYYY-MM-ddTHH:mm:ss.sssZ
+	const now = new Date();
+	const hours = [];
+	for (let i = 0; i < 24 * daysInThePast; i++) {
+		const baseDate = new Date(now);
+		baseDate.setMinutes(0);
+		baseDate.setSeconds(0);
+		baseDate.setMilliseconds(0);
+		const hour = new Date(baseDate.getTime() - i * 60 * 60 * 1000);
+		hours.push(hour.toISOString());
+	}
+
+	for (const targetDate of hours) {
+		console.log('dispatching catch-up for date', targetDate);
+		const newEvent = {
+			targetDate: targetDate,
+		};
+		const params = {
+			FunctionName: context.functionName,
+			InvocationType: 'Event',
+			LogType: 'Tail',
+			Payload: JSON.stringify(newEvent),
+		};
+		// console.log('\tinvoking lambda', params);
+		const result = await lambda
+			.invoke({
+				FunctionName: context.functionName,
+				InvocationType: 'Event',
+				LogType: 'Tail',
+				Payload: JSON.stringify(newEvent),
+			})
+			.promise();
+		// console.log('\tinvocation result', result);
+		await sleep(50);
 	}
 };
