@@ -62,7 +62,7 @@ export const buildPlacementDistribution = (
 ): readonly { rank: number; totalMatches: number }[] => {
 	const placementDistribution: { rank: number; totalMatches: number }[] = [];
 	const groupedByPlacement: { [placement: string]: readonly InternalBgsRow[] } = groupByFunction(
-		(res: InternalBgsRow) => '' + res.rank,
+		(res: InternalBgsRow) => '' + res.playerRank,
 	)(rows);
 	Object.keys(groupedByPlacement).forEach((placement) =>
 		placementDistribution.push({ rank: +placement, totalMatches: groupedByPlacement[placement].length }),

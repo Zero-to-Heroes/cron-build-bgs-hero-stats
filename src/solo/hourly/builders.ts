@@ -58,7 +58,7 @@ export const buildCombatWinrate = (
 			continue;
 		}
 
-		let parsed: readonly { turn: number; winrate: number }[] = null;
+		let parsed: readonly { turn: number; wonPercent: number }[] = null;
 		try {
 			parsed = JSON.parse(row.combatWinrate);
 			// logger.debug('parsed', parsed);
@@ -75,7 +75,7 @@ export const buildCombatWinrate = (
 		// }
 
 		for (const turnInfo of parsed) {
-			if (turnInfo.turn === 0 || turnInfo.winrate == null) {
+			if (turnInfo.turn === 0 || turnInfo.wonPercent == null) {
 				continue;
 			}
 			// if (debug) {
@@ -86,7 +86,7 @@ export const buildCombatWinrate = (
 			// 	logger.log('\t existingInfo', existingInfo);
 			// }
 			existingInfo.dataPoints = existingInfo.dataPoints + 1;
-			existingInfo.totalWinrate = existingInfo.totalWinrate + Math.round(turnInfo.winrate);
+			existingInfo.totalWinrate = existingInfo.totalWinrate + Math.round(turnInfo.wonPercent);
 			// if (debug) {
 			// 	logger.log('\t existingInfo after', existingInfo);
 			// }

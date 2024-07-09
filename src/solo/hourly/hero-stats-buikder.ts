@@ -21,7 +21,7 @@ export const buildHeroStatsForMmr = (
 const buildStatsForSingleHero = (rows: readonly InternalBgsRow[]): BgsGlobalHeroStat => {
 	// const startTime = new Date().getTime();
 	const ref = rows[0];
-	const averagePosition = average(rows.map((r) => r.rank));
+	const averagePosition = average(rows.map((r) => r.playerRank));
 	// const placementStartTime = new Date().getTime();
 	const placementDistribution = buildPlacementDistribution(rows);
 	// const placementProcessTime = new Date().getTime() - placementStartTime;
@@ -38,7 +38,7 @@ const buildStatsForSingleHero = (rows: readonly InternalBgsRow[]): BgsGlobalHero
 	// 	averageStats: round(info.totalStats / info.dataPoints),
 	// }));
 
-	const allRanks = rows.map((r) => r.rank);
+	const allRanks = rows.map((r) => r.playerRank);
 	const allDeviations = allRanks.map((r) => averagePosition - r);
 	const squareDeviations = allDeviations.map((d) => Math.pow(d, 2));
 	const sumOfSquares = squareDeviations.reduce((a, b) => a + b, 0);
@@ -74,8 +74,8 @@ const buildTribeStats = (rows: readonly InternalBgsRow[], refAveragePosition: nu
 	return uniqueTribes.map((tribe) => {
 		const rowsForTribe = rows.filter((r) => r.tribesExpanded.includes(tribe));
 		const rowsWithoutTribe = rows.filter((r) => !r.tribesExpanded.includes(tribe));
-		const averagePosition = average(rowsForTribe.map((r) => r.rank));
-		const averagePositionWithoutTribe = average(rowsWithoutTribe.map((r) => r.rank));
+		const averagePosition = average(rowsForTribe.map((r) => r.playerRank));
+		const averagePositionWithoutTribe = average(rowsWithoutTribe.map((r) => r.playerRank));
 		const result: BgsHeroTribeStat = {
 			tribe: tribe,
 			dataPoints: rowsForTribe.length,

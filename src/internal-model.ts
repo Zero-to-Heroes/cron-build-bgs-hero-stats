@@ -7,7 +7,7 @@ export interface InternalBgsRow {
 	readonly buildNumber: number;
 	readonly rating: number;
 	readonly heroCardId: string;
-	readonly rank: number;
+	readonly playerRank: number;
 	/** @deprecated */
 	readonly tribes: string;
 	readonly tribesExpanded: readonly Race[];

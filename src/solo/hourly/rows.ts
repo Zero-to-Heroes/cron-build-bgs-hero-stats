@@ -166,7 +166,7 @@ const processRows = async (
 				row.heroCardId !== CardIds.ArannaStarseeker_ArannaUnleashedToken &&
 				row.heroCardId !== CardIds.QueenAzshara_NagaQueenAzsharaToken,
 		)
-		.filter((row) => !!row.rank && !!row.tribes?.length)
+		.filter((row) => !!row.playerRank && !!row.tribes?.length)
 		.map((row) => {
 			const result: InternalBgsRow = {
 				...row,

@@ -18,7 +18,7 @@ export const buildRewardStatsForMmr = (
 const buildStatsForSingleReward = (rows: readonly InternalBgsRow[]): BgsGlobalRewardStat => {
 	// const startTime = new Date().getTime();
 	const ref = rows[0];
-	const averagePlacement = average(rows.map((r) => r.rank));
+	const averagePlacement = average(rows.map((r) => r.playerRank));
 
 	return {
 		rewardCardId: ref.bgsHeroQuestRewards.trim(),
@@ -37,7 +37,7 @@ const buildTribeStats = (
 	const uniqueTribes: readonly Race[] = [...new Set(rowsWithTribes.flatMap((r) => r.tribesExpanded))];
 	return uniqueTribes.map((tribe) => {
 		const rowsForTribe = rowsWithTribes.filter((r) => r.tribesExpanded.includes(tribe));
-		const placement = average(rowsForTribe.map((r) => r.rank));
+		const placement = average(rowsForTribe.map((r) => r.playerRank));
 		return {
 			tribe: tribe,
 			dataPoints: rowsForTribe.length,
@@ -54,7 +54,7 @@ const buildHeroStats = (rows: readonly InternalBgsRow[], refAveragePlacement: nu
 		return {
 			heroCardId: heroCardId,
 			dataPoints: rowsForHero.length,
-			averagePlacement: average(rowsForHero.map((r) => r.rank)),
+			averagePlacement: average(rowsForHero.map((r) => r.playerRank)),
 		};
 	});
 };
