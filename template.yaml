@@ -42,7 +42,7 @@ Resources:
             Timeout: 880
             CodeUri: ./dist/solo/aggregate-hourly/heroes/_build-aggregated-stats
             MemorySize: 4000
-            ReservedConcurrentExecutions: 10
+            ReservedConcurrentExecutions: 15
             Layers:
                 - !Sub "arn:aws:lambda:${AWS::Region}:580247275435:layer:LambdaInsightsExtension:14"
             Policies:
@@ -125,7 +125,7 @@ Resources:
             Timeout: 880
             CodeUri: ./dist/duos/aggregate-hourly/heroes/_build-aggregated-stats
             MemorySize: 4000
-            ReservedConcurrentExecutions: 10
+            ReservedConcurrentExecutions: 15
             Layers:
                 - !Sub "arn:aws:lambda:${AWS::Region}:580247275435:layer:LambdaInsightsExtension:14"
             Policies:
