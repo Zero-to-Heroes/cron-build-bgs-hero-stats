@@ -19,7 +19,9 @@ export const mergeStats = (
 	const result: readonly BgsGlobalHeroStat[] = Object.values(groupedByHero).map((stats) =>
 		mergeStatsForSingleHero(stats, allCards),
 	);
-	return result;
+	const maxDataPoints = Math.max(...result.map((r) => r.dataPoints));
+	const filtered = result.filter((r) => r.dataPoints > maxDataPoints / 50);
+	return filtered;
 };
 
 const mergeStatsForSingleHero = (stats: readonly BgsGlobalHeroStat[], allCards: AllCardsService): BgsGlobalHeroStat => {
