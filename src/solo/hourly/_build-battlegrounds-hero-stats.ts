@@ -6,6 +6,7 @@ import AWS from 'aws-sdk';
 import { InternalBgsRow } from '../../internal-model';
 import { buildHeroStats } from './hero-stats';
 import { readRowsFromS3, saveRowsOnS3 } from './rows';
+import { buildTrinketStats } from './trinkets/trinket-stats';
 
 export const s3 = new S3();
 const allCards = new AllCardsService();
@@ -18,6 +19,7 @@ export const STATS_KEY_PREFIX = `api/bgs`;
 export const WORKING_ROWS_FILE = `${STATS_KEY_PREFIX}/working/working-rows-%time%.json`;
 export const HOURLY_KEY_HERO = `${STATS_KEY_PREFIX}/hero-stats/mmr-%mmrPercentile%/hourly/%startDate%.gz.json`;
 export const HOURLY_KEY_QUEST = `${STATS_KEY_PREFIX}/quest-stats/mmr-%mmrPercentile%/hourly/%startDate%.gz.json`;
+export const HOURLY_KEY_TRINKET = `${STATS_KEY_PREFIX}/trinket-stats/mmr-%mmrPercentile%/hourly/%startDate%.gz.json`;
 
 // This example demonstrates a NodeJS 8.10 async handler[1], however of course you could use
 // the more traditional callback-style handler.
@@ -37,7 +39,7 @@ export const handleNewStats = async (event, context: Context) => {
 		return;
 	}
 
-	if (!event.statsV2 && !event.questsV2) {
+	if (!event.statsV2 && !event.questsV2 && !event.trinkets) {
 		await dispatchMainEvents(context, event);
 		cleanup();
 		return;
@@ -52,6 +54,18 @@ export const handleNewStats = async (event, context: Context) => {
 		const lastHourRows: readonly InternalBgsRow[] = await readRowsFromS3(event.startDate);
 		// logger.log('building hero stats', event.startDate, lastHourRows?.length);
 		await buildHeroStats(event.startDate, event.mmr, lastHourRows, allCards);
+	} else if (event.trinkets) {
+		const lastHourRows: readonly InternalBgsRow[] = await readRowsFromS3(event.startDate);
+		// logger.log('building hero stats', event.startDate, lastHourRows?.length);
+		await buildTrinketStats(
+			event.startDate,
+			event.mmr,
+			lastHourRows,
+			allCards,
+			STATS_BUCKET,
+			HOURLY_KEY_TRINKET,
+			s3,
+		);
 	}
 
 	cleanup();
@@ -67,6 +81,7 @@ const dispatchMainEvents = async (context: Context, event) => {
 
 	await dispatchStatsV2Lambda(context, startDate);
 	// await dispatchQuestsV2Lambda(context, startDate);
+	await dispatchTrinketsLambda(context, startDate);
 };
 
 const buildProcessStartDate = (event): Date => {
@@ -82,6 +97,32 @@ const buildProcessStartDate = (event): Date => {
 	processStartDate.setMilliseconds(0);
 	processStartDate.setHours(processStartDate.getHours() - 1);
 	return processStartDate;
+};
+
+const dispatchTrinketsLambda = async (context: Context, startDate: Date) => {
+	for (const mmr of allMmrPercentiles) {
+		const newEvent = {
+			trinkets: true,
+			mmr: mmr,
+			startDate: startDate,
+		};
+		const params = {
+			FunctionName: context.functionName,
+			InvocationType: 'Event',
+			LogType: 'Tail',
+			Payload: JSON.stringify(newEvent),
+		};
+		console.log('\tinvoking lambda', params);
+		const result = await lambda
+			.invoke({
+				FunctionName: context.functionName,
+				InvocationType: 'Event',
+				LogType: 'Tail',
+				Payload: JSON.stringify(newEvent),
+			})
+			.promise();
+		// logger.log('\tinvocation result', result);
+	}
 };
 
 const dispatchQuestsV2Lambda = async (context: Context, startDate: Date) => {

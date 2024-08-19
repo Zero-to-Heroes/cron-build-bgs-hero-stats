@@ -24,4 +24,5 @@ export interface InternalBgsRow {
 	readonly bgsQuestsDifficulties: string;
 	readonly bgsHeroQuestRewards: string;
 	readonly bgsAnomalies: string;
+	readonly bgsTrinkets: string;
 }
