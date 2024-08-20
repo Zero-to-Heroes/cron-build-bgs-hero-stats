@@ -10,6 +10,7 @@ export interface BgsTrinketStats {
 export interface BgsGlobalTrinketStat {
 	readonly trinketCardId: string;
 	readonly dataPoints: number;
+	readonly totalOffered: number;
 	readonly averagePlacement: number;
 	readonly heroStats: readonly BgsTrinketHeroStat[];
 }

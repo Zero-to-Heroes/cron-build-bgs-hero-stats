@@ -8,23 +8,32 @@ export const buildTrinketStatsForMmr = (
 	allCards: AllCardsService,
 ): readonly BgsGlobalTrinketStat[] => {
 	const denormalized = rows.flatMap((row) => {
-		const quests = row.bgsHeroQuests?.split(',').map((quest) => quest.trim());
-		return [...quests.map((quest) => ({ ...row, bgsHeroQuests: quest }))];
+		const trinkets = row.bgsTrinkets?.split(',').map((trinket) => trinket.trim());
+		return [...trinkets.map((trinket) => ({ ...row, bgsTrinkets: trinket }))];
+	});
+	const denormalizedOptions = rows.flatMap((row) => {
+		const trinkets = row.bgsTrinketsOptions?.split(',').map((trinket) => trinket.trim());
+		return [...trinkets.map((trinket) => ({ ...row, bgsTrinketsOptions: trinket }))];
 	});
 	const groupedByTrinket: {
 		[trinketCardId: string]: readonly InternalBgsRow[];
-	} = groupByFunction((row: InternalBgsRow) => row.bgsHeroQuests)(denormalized);
-	return Object.values(groupedByTrinket).flatMap((data) => buildStatsForSingleTrinket(data));
+	} = groupByFunction((row: InternalBgsRow) => row.bgsTrinkets)(denormalized);
+	return Object.values(groupedByTrinket).flatMap((data) => buildStatsForSingleTrinket(data, denormalizedOptions));
 };
 
 // All rows here belong to a single trinket
-const buildStatsForSingleTrinket = (rows: readonly InternalBgsRow[]): BgsGlobalTrinketStat => {
+const buildStatsForSingleTrinket = (
+	rows: readonly InternalBgsRow[],
+	allDenormalizedOptions: readonly InternalBgsRow[],
+): BgsGlobalTrinketStat => {
 	const ref = rows[0];
 	const averagePlacement = average(rows.map((r) => r.playerRank));
+	const totalOffered = allDenormalizedOptions.filter((r) => r.bgsTrinketsOptions === ref.bgsTrinkets).length;
 
 	return {
 		trinketCardId: ref.bgsHeroQuests.trim(),
 		dataPoints: rows.length,
+		totalOffered: totalOffered,
 		averagePlacement: averagePlacement,
 		heroStats: buildHeroStats(rows, averagePlacement),
 	};
