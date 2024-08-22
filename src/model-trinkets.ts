@@ -1,22 +1,23 @@
-import { MmrPercentile, WithMmrAndTimePeriod } from './models';
+import { TimePeriod } from './models';
 
 export interface BgsTrinketStats {
 	readonly lastUpdateDate: Date;
-	readonly mmrPercentiles: readonly MmrPercentile[];
 	readonly dataPoints: number;
-	readonly trinketStats: readonly WithMmrAndTimePeriod<BgsGlobalTrinketStat>[];
+	readonly timePeriod: TimePeriod;
+	readonly trinketStats: readonly BgsTrinketStat[];
 }
 
-export interface BgsGlobalTrinketStat {
+export interface BgsTrinketStat {
 	readonly trinketCardId: string;
 	readonly dataPoints: number;
-	readonly totalOffered: number;
+	readonly pickRate: number;
+	readonly pickRateAtMmr: readonly {
+		mmr: number;
+		pickRate: number;
+	}[];
 	readonly averagePlacement: number;
-	readonly heroStats: readonly BgsTrinketHeroStat[];
-}
-
-export interface BgsTrinketHeroStat {
-	readonly heroCardId: string;
-	readonly dataPoints: number;
-	readonly averagePlacement: number;
+	readonly averagePlacementAtMmr: readonly {
+		mmr: number;
+		placement: number;
+	}[];
 }

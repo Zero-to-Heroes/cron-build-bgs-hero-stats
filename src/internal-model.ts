@@ -27,3 +27,26 @@ export interface InternalBgsRow {
 	readonly bgsTrinkets: string;
 	readonly bgsTrinketsOptions: string;
 }
+
+import { MmrPercentile, WithMmrAndTimePeriod } from './models';
+
+export interface InternalBgsTrinketStats {
+	readonly lastUpdateDate: Date;
+	readonly mmrPercentiles: readonly MmrPercentile[];
+	readonly dataPoints: number;
+	readonly trinketStats: readonly WithMmrAndTimePeriod<InternalBgsGlobalTrinketStat>[];
+}
+
+export interface InternalBgsGlobalTrinketStat {
+	readonly trinketCardId: string;
+	readonly dataPoints: number;
+	readonly totalOffered: number;
+	readonly averagePlacement: number;
+	readonly heroStats: readonly InternalBgsTrinketHeroStat[];
+}
+
+export interface InternalBgsTrinketHeroStat {
+	readonly heroCardId: string;
+	readonly dataPoints: number;
+	readonly averagePlacement: number;
+}

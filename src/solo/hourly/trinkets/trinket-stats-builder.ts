@@ -1,12 +1,12 @@
 import { groupByFunction } from '@firestone-hs/aws-lambda-utils';
 import { AllCardsService } from '@firestone-hs/reference-data';
-import { InternalBgsRow } from '../../../internal-model';
-import { BgsGlobalTrinketStat, BgsTrinketHeroStat } from '../../../model-trinkets';
+import { InternalBgsGlobalTrinketStat, InternalBgsRow, InternalBgsTrinketHeroStat } from '../../../internal-model';
 
 export const buildTrinketStatsForMmr = (
 	rows: readonly InternalBgsRow[],
 	allCards: AllCardsService,
-): readonly BgsGlobalTrinketStat[] => {
+): readonly InternalBgsGlobalTrinketStat[] => {
+	console.debug('building trinket stats for', rows.length, 'rows');
 	const denormalized = rows.flatMap((row) => {
 		const trinkets = row.bgsTrinkets?.split(',').map((trinket) => trinket.trim());
 		return [...trinkets.map((trinket) => ({ ...row, bgsTrinkets: trinket }))];
@@ -15,6 +15,7 @@ export const buildTrinketStatsForMmr = (
 		const trinkets = row.bgsTrinketsOptions?.split(',').map((trinket) => trinket.trim());
 		return [...trinkets.map((trinket) => ({ ...row, bgsTrinketsOptions: trinket }))];
 	});
+	console.debug('denormalized', denormalized.length, 'rows after denormalization');
 	const groupedByTrinket: {
 		[trinketCardId: string]: readonly InternalBgsRow[];
 	} = groupByFunction((row: InternalBgsRow) => row.bgsTrinkets)(denormalized);
@@ -25,13 +26,14 @@ export const buildTrinketStatsForMmr = (
 const buildStatsForSingleTrinket = (
 	rows: readonly InternalBgsRow[],
 	allDenormalizedOptions: readonly InternalBgsRow[],
-): BgsGlobalTrinketStat => {
+): InternalBgsGlobalTrinketStat => {
 	const ref = rows[0];
 	const averagePlacement = average(rows.map((r) => r.playerRank));
 	const totalOffered = allDenormalizedOptions.filter((r) => r.bgsTrinketsOptions === ref.bgsTrinkets).length;
+	console.debug('building stats for', ref.bgsTrinkets, 'with', rows.length, 'rows');
 
 	return {
-		trinketCardId: ref.bgsHeroQuests.trim(),
+		trinketCardId: ref.bgsTrinkets.trim(),
 		dataPoints: rows.length,
 		totalOffered: totalOffered,
 		averagePlacement: averagePlacement,
@@ -42,7 +44,7 @@ const buildStatsForSingleTrinket = (
 const buildHeroStats = (
 	rows: readonly InternalBgsRow[],
 	refAveragePlacement: number,
-): readonly BgsTrinketHeroStat[] => {
+): readonly InternalBgsTrinketHeroStat[] => {
 	const groupedByHero = groupByFunction((r: InternalBgsRow) => r.heroCardId)(rows);
 	return Object.keys(groupedByHero).map((heroCardId) => {
 		const rowsForHero = groupedByHero[heroCardId];
