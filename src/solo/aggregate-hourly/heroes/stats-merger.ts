@@ -90,8 +90,7 @@ const mergeTribeStats = (
 			averagePositionWithoutTribe: round(averagePositionWithoutTribe),
 			refAveragePosition: round(refAveragePosition),
 			impactAveragePosition: round(averagePosition - refAveragePosition),
-			// impactAveragePositionDebug: round(impactAveragePosition),
-			impactAveragePositionVsMissingTribe: round(averagePositionWithoutTribe - refAveragePosition),
+			impactAveragePositionVsMissingTribe: round(averagePosition - averagePositionWithoutTribe),
 		};
 	});
 	return result;
