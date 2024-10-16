@@ -46,7 +46,7 @@ const buildSingleTrinketStat = (
 	}[] = mmrPercentiles.map((percentile) => {
 		const allData = data.filter((d) => d.mmrPercentile === percentile);
 		const pickedTotal = allData.map((d) => d.dataPoints).reduce((a, b) => a + b, 0);
-		const offeredTotal = allData.map((d) => d.totalOffered).reduce((a, b) => a + b, 0);
+		const offeredTotal = allData.map((d) => d.totalOffered ?? 0).reduce((a, b) => a + b, 0);
 		const pickRate = pickedTotal / offeredTotal;
 		return {
 			mmr: percentile,

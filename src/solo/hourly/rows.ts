@@ -172,9 +172,12 @@ const processRows = async (
 				...row,
 				heroCardId: normalizeHeroCardId(row.heroCardId, allCards),
 				tribesExpanded: row.tribes.split(',').map((tribe) => parseInt(tribe)),
+				heroesOptionsExpanded:
+					row.heroesOptions?.split(',').map((hero) => normalizeHeroCardId(hero, allCards)) ?? [],
 			};
 			delete (result as any).reviewId;
 			delete (result as any).tribes;
+			delete (result as any).heroesOptions;
 			return result;
 		});
 	if (validRows.length > 0) {

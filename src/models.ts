@@ -10,6 +10,8 @@ export interface BgsHeroStatsV2 {
 export interface BgsGlobalHeroStat {
 	readonly heroCardId: string;
 	readonly dataPoints: number;
+	readonly totalOffered: number;
+	readonly totalPicked: number;
 	readonly averagePosition: number;
 	readonly standardDeviation: number;
 	readonly standardDeviationOfTheMean: number;
@@ -28,6 +30,8 @@ export interface BgsHeroTribeStat {
 	readonly tribe: Race;
 	readonly dataPoints: number;
 	readonly dataPointsOnMissingTribe: number;
+	readonly totalOffered: number;
+	readonly totalPicked: number;
 	readonly averagePosition: number;
 	readonly averagePositionWithoutTribe: number;
 	// Impacts are only meant to be used in the final output

@@ -1,11 +1,13 @@
 import { Race } from '@firestone-hs/reference-data';
 
+// bgs_run_stats and bgs_run_stats_duo
 export interface InternalBgsRow {
 	readonly id: number;
 	readonly reviewId: string;
 	readonly creationDate: Date;
 	readonly buildNumber: number;
 	readonly rating: number;
+	// Normalized once it goes out of the "rows.ts" process
 	readonly heroCardId: string;
 	readonly playerRank: number;
 	/** @deprecated */
@@ -26,6 +28,9 @@ export interface InternalBgsRow {
 	readonly bgsAnomalies: string;
 	readonly bgsTrinkets: string;
 	readonly bgsTrinketsOptions: string;
+	/** @deprecated */
+	readonly heroesOptions: string;
+	readonly heroesOptionsExpanded: readonly string[];
 }
 
 import { MmrPercentile, WithMmrAndTimePeriod } from './models';

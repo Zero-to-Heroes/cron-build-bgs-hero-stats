@@ -1,6 +1,6 @@
 import { groupByFunction } from '@firestone-hs/aws-lambda-utils';
 import { AllCardsService, Race } from '@firestone-hs/reference-data';
-import { normalizeHeroCardId, round } from '../../common/util-functions';
+import { round } from '../../common/util-functions';
 import { InternalBgsRow } from '../../internal-model';
 import { BgsGlobalHeroStat, BgsHeroTribeStat } from '../../models';
 import { buildCombatWinrate, buildWarbandStats } from './builders';
@@ -13,47 +13,55 @@ export const buildHeroStatsForMmr = (
 	// This takes about 3s, so not impactful
 	const groupedByHero: {
 		[questCardId: string]: readonly InternalBgsRow[];
-	} = groupByFunction((row: InternalBgsRow) => normalizeHeroCardId(row.heroCardId, allCards))(rows);
-	return Object.values(groupedByHero).flatMap((data) => buildStatsForSingleHero(data));
+	} = groupByFunction((row: InternalBgsRow) => row.heroCardId)(rows);
+	return Object.values(groupedByHero).flatMap((data) => buildStatsForSingleHero(data, rows));
 };
 
 // All rows here belong to a single hero
-const buildStatsForSingleHero = (rows: readonly InternalBgsRow[]): BgsGlobalHeroStat => {
+const buildStatsForSingleHero = (
+	rowsForHero: readonly InternalBgsRow[],
+	allRows: readonly InternalBgsRow[],
+): BgsGlobalHeroStat => {
 	// const startTime = new Date().getTime();
-	const ref = rows[0];
-	const averagePosition = average(rows.map((r) => r.playerRank));
+	const offeredRows = allRows.filter((r) => r.heroesOptionsExpanded.includes(rowsForHero[0].heroCardId));
+	const totalOffered = offeredRows.length;
+	const totalPicked = offeredRows.filter((r) => r.heroCardId === rowsForHero[0].heroCardId).length;
+	const ref = rowsForHero[0];
+	const averagePosition = average(rowsForHero.map((r) => r.playerRank));
 	// const placementStartTime = new Date().getTime();
-	const placementDistribution = buildPlacementDistribution(rows);
+	const placementDistribution = buildPlacementDistribution(rowsForHero);
 	// const placementProcessTime = new Date().getTime() - placementStartTime;
 	// const winrateStartTime = new Date().getTime();
-	const rawCombatWinrates = buildCombatWinrate(rows);
+	const rawCombatWinrates = buildCombatWinrate(rowsForHero);
 	// const winrateProcessTime = new Date().getTime() - winrateStartTime;
 	// const combatWinrate: readonly { turn: number; winrate: number }[] = rawCombatWinrates.map((info) => ({
 	// 	turn: info.turn,
 	// 	winrate: round(info.totalWinrate / info.dataPoints),
 	// }));
-	const rawWarbandStats = buildWarbandStats(rows);
+	const rawWarbandStats = buildWarbandStats(rowsForHero);
 	// const warbandStats: readonly { turn: number; averageStats: number }[] = rawWarbandStats.map((info) => ({
 	// 	turn: info.turn,
 	// 	averageStats: round(info.totalStats / info.dataPoints),
 	// }));
 
-	const allRanks = rows.map((r) => r.playerRank);
+	const allRanks = rowsForHero.map((r) => r.playerRank);
 	const allDeviations = allRanks.map((r) => averagePosition - r);
 	const squareDeviations = allDeviations.map((d) => Math.pow(d, 2));
 	const sumOfSquares = squareDeviations.reduce((a, b) => a + b, 0);
-	const variance = sumOfSquares / rows.length;
+	const variance = sumOfSquares / rowsForHero.length;
 	const standardDeviation = Math.sqrt(variance);
-	const standardDeviationOfTheMean = standardDeviation / Math.sqrt(rows.length);
+	const standardDeviationOfTheMean = standardDeviation / Math.sqrt(rowsForHero.length);
 	// const tribeStartTime = new Date().getTime();
-	const tribeStats = buildTribeStats(rows, averagePosition);
+	const tribeStats = buildTribeStats(rowsForHero, offeredRows, averagePosition);
 	// const tribeProcessTime = new Date().getTime() - tribeStartTime;
 	// const anomalyStartTime = new Date().getTime();
 	// const anomalyStats = buildAnomalyStats(rows, averagePosition, placementDistribution, combatWinrate, warbandStats);
 	// const anomalyProcessTime = new Date().getTime() - anomalyStartTime;
 	const result: BgsGlobalHeroStat = {
 		heroCardId: ref.heroCardId,
-		dataPoints: rows.length,
+		dataPoints: rowsForHero.length,
+		totalOffered: totalOffered,
+		totalPicked: totalPicked,
 		averagePosition: round(averagePosition),
 		standardDeviation: round(standardDeviation),
 		standardDeviationOfTheMean: round(standardDeviationOfTheMean),
@@ -69,17 +77,26 @@ const buildStatsForSingleHero = (rows: readonly InternalBgsRow[]): BgsGlobalHero
 	return result;
 };
 
-const buildTribeStats = (rows: readonly InternalBgsRow[], refAveragePosition: number): readonly BgsHeroTribeStat[] => {
-	const uniqueTribes: readonly Race[] = [...new Set(rows.flatMap((r) => r.tribesExpanded))];
+const buildTribeStats = (
+	rowsForHero: readonly InternalBgsRow[],
+	offeredRows: readonly InternalBgsRow[],
+	refAveragePosition: number,
+): readonly BgsHeroTribeStat[] => {
+	const uniqueTribes: readonly Race[] = [...new Set(rowsForHero.flatMap((r) => r.tribesExpanded))];
 	return uniqueTribes.map((tribe) => {
-		const rowsForTribe = rows.filter((r) => r.tribesExpanded.includes(tribe));
-		const rowsWithoutTribe = rows.filter((r) => !r.tribesExpanded.includes(tribe));
+		const rowsForTribe = rowsForHero.filter((r) => r.tribesExpanded.includes(tribe));
+		const offeredRowsForTribe = offeredRows.filter((r) => r.tribesExpanded.includes(tribe));
+		const totalOffered = offeredRowsForTribe.length;
+		const totalPicked = offeredRowsForTribe.filter((r) => r.heroCardId === rowsForHero[0].heroCardId).length;
+		const rowsWithoutTribe = rowsForHero.filter((r) => !r.tribesExpanded.includes(tribe));
 		const averagePosition = average(rowsForTribe.map((r) => r.playerRank));
 		const averagePositionWithoutTribe = average(rowsWithoutTribe.map((r) => r.playerRank));
 		const result: BgsHeroTribeStat = {
 			tribe: tribe,
 			dataPoints: rowsForTribe.length,
 			dataPointsOnMissingTribe: rowsWithoutTribe.length,
+			totalOffered: totalOffered,
+			totalPicked: totalPicked,
 			averagePosition: averagePosition,
 			averagePositionWithoutTribe: averagePositionWithoutTribe,
 			impactAveragePosition: averagePosition - refAveragePosition,

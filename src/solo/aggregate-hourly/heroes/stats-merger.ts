@@ -42,6 +42,8 @@ const mergeStatsForSingleHero = (stats: readonly BgsGlobalHeroStat[], allCards: 
 	const result: BgsGlobalHeroStat = {
 		heroCardId: ref.heroCardId,
 		dataPoints: stats.map((stat) => stat.dataPoints).reduce((a, b) => a + b, 0),
+		totalOffered: stats.map((stat) => stat.totalOffered ?? 0).reduce((a, b) => a + b, 0),
+		totalPicked: stats.map((stat) => stat.totalPicked ?? 0).reduce((a, b) => a + b, 0),
 		averagePosition: round(averagePosition),
 		standardDeviation: round(standardDeviation),
 		standardDeviationOfTheMean: round(standardDeviationOfTheMean),
@@ -86,6 +88,8 @@ const mergeTribeStats = (
 			dataPointsOnMissingTribe: tribeStats
 				.map((stat) => stat.dataPointsOnMissingTribe)
 				.reduce((a, b) => a + b, 0),
+			totalOffered: tribeStats.map((stat) => stat.totalOffered ?? 0).reduce((a, b) => a + b, 0),
+			totalPicked: tribeStats.map((stat) => stat.totalPicked ?? 0).reduce((a, b) => a + b, 0),
 			averagePosition: round(averagePosition),
 			averagePositionWithoutTribe: round(averagePositionWithoutTribe),
 			refAveragePosition: round(refAveragePosition),
