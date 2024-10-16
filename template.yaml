@@ -13,7 +13,7 @@ Resources:
             Timeout: 880
             CodeUri: ./dist/solo/hourly/_build-battlegrounds-hero-stats
             MemorySize: 4000
-            ReservedConcurrentExecutions: 10
+            ReservedConcurrentExecutions: 5
             Layers:
                 - !Sub "arn:aws:lambda:${AWS::Region}:580247275435:layer:LambdaInsightsExtension:14"
             Policies:
@@ -124,7 +124,7 @@ Resources:
             Timeout: 880
             CodeUri: ./dist/duos/hourly/_build-battlegrounds-hero-stats
             MemorySize: 4000
-            ReservedConcurrentExecutions: 10
+            ReservedConcurrentExecutions: 5
             Layers:
                 - !Sub "arn:aws:lambda:${AWS::Region}:580247275435:layer:LambdaInsightsExtension:14"
             Policies:
