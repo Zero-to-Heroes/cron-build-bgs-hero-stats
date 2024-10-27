@@ -31,6 +31,8 @@ export interface InternalBgsRow {
 	/** @deprecated */
 	readonly heroesOptions: string;
 	readonly heroesOptionsExpanded: readonly string[];
+	readonly playedCards: string;
+	readonly playedCardsExpanded: readonly { cardId: string; turn: number }[];
 }
 
 import { MmrPercentile, WithMmrAndTimePeriod } from './models';
@@ -40,6 +42,34 @@ export interface InternalBgsTrinketStats {
 	readonly mmrPercentiles: readonly MmrPercentile[];
 	readonly dataPoints: number;
 	readonly trinketStats: readonly WithMmrAndTimePeriod<InternalBgsGlobalTrinketStat>[];
+}
+
+export interface InternalBgsCardStats {
+	readonly lastUpdateDate: Date;
+	readonly mmrPercentiles: readonly MmrPercentile[];
+	readonly dataPoints: number;
+	readonly cardStats: readonly WithMmrAndTimePeriod<InternalBgsCardStat>[];
+}
+
+export interface InternalBgsCardStat {
+	readonly cardId: string;
+	readonly totalPlayed: number;
+	readonly averagePlacement: number;
+	readonly turnStats: readonly InternalBgsCardTurnStat[];
+	readonly heroStats: readonly InternalBgsCardHeroStat[];
+}
+
+export interface InternalBgsCardHeroStat {
+	readonly heroCardId: string;
+	readonly totalPlayedWithHero: number;
+	readonly averagePlacement: number;
+	readonly turnStats: readonly InternalBgsCardTurnStat[];
+}
+
+export interface InternalBgsCardTurnStat {
+	readonly turn: number;
+	readonly totalPlayedAtTurn: number;
+	readonly averagePlacement: number;
 }
 
 export interface InternalBgsGlobalTrinketStat {
