@@ -55,6 +55,8 @@ export interface InternalBgsCardStat {
 	readonly cardId: string;
 	readonly totalPlayed: number;
 	readonly averagePlacement: number;
+	readonly totalOther: number;
+	readonly averagePlacementOther: number;
 	readonly turnStats: readonly InternalBgsCardTurnStat[];
 	readonly heroStats: readonly InternalBgsCardHeroStat[];
 }
@@ -70,6 +72,8 @@ export interface InternalBgsCardTurnStat {
 	readonly turn: number;
 	readonly totalPlayedAtTurn: number;
 	readonly averagePlacement: number;
+	readonly totalPlayedAtTurnOther: number;
+	readonly averagePlacementOther: number;
 }
 
 export interface InternalBgsGlobalTrinketStat {

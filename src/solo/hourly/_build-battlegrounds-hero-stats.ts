@@ -54,11 +54,11 @@ export const handleNewStats = async (event, context: Context) => {
 	// } else
 	if (event.statsV2) {
 		const lastHourRows: readonly InternalBgsRow[] = await readRowsFromS3(event.startDate);
-		// logger.log('building hero stats', event.startDate, lastHourRows?.length);
+		console.log('building hero stats', event.startDate, event.mmr, lastHourRows?.length);
 		await buildHeroStats(event.startDate, event.mmr, lastHourRows, allCards);
 	} else if (event.trinkets) {
 		const lastHourRows: readonly InternalBgsRow[] = await readRowsFromS3(event.startDate);
-		// logger.log('building hero stats', event.startDate, lastHourRows?.length);
+		console.log('building trinket stats', event.startDate, event.mmr, lastHourRows?.length);
 		await buildTrinketStats(
 			event.startDate,
 			event.mmr,
@@ -70,7 +70,13 @@ export const handleNewStats = async (event, context: Context) => {
 		);
 	} else if (event.cards) {
 		const lastHourRows: readonly InternalBgsRow[] = await readRowsFromS3(event.startDate);
-		// logger.log('building hero stats', event.startDate, lastHourRows?.length);
+		console.log(
+			'building card stats',
+			event.startDate,
+			event.mmr,
+			lastHourRows?.length,
+			lastHourRows[lastHourRows.length - 1],
+		);
 		await buildCardStats(event.startDate, event.mmr, lastHourRows, allCards, STATS_BUCKET, HOURLY_KEY_CARD, s3);
 	}
 

@@ -1,8 +1,8 @@
 import { gzipSync } from 'zlib';
 import { BgsCardStat, BgsCardStats } from '../../../model-cards';
 import { TimePeriod } from '../../../models';
+import { STAT_KEY_CARD } from '../../aggregate-hourly/config';
 import { STATS_BUCKET } from '../../hourly/_build-battlegrounds-hero-stats';
-import { STAT_KEY_CARD } from '../config';
 import { s3 } from './_build-aggregated-stats';
 
 export const persistData = async (mergedStats: readonly BgsCardStat[], timePeriod: TimePeriod, lastUpdate: Date) => {

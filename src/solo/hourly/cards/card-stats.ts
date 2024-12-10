@@ -21,6 +21,7 @@ export const buildCardStats = async (
 	const mmrRows = rowsWithCards.filter((row) => mmrPercentile.percentile === 100 || row.rating >= mmrPercentile.mmr);
 
 	const minionStats: readonly InternalBgsCardStat[] = buildCardStatsForMmr(mmrRows, allCards);
+	console.debug('built stats for', minionStats.length, 'cards');
 	const result: InternalBgsCardStats = {
 		lastUpdateDate: new Date(),
 		mmrPercentiles: mmrPercentiles,

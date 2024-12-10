@@ -30,7 +30,7 @@ const buildStatsForSingleTrinket = (
 	const ref = rows[0];
 	const averagePlacement = average(rows.map((r) => r.playerRank));
 	const totalOffered = allDenormalizedOptions.filter((r) => r.bgsTrinketsOptions === ref.bgsTrinkets).length;
-	console.debug('building stats for', ref.bgsTrinkets, 'with', rows.length, 'rows');
+	// console.debug('building stats for', ref.bgsTrinkets, 'with', rows.length, 'rows');
 
 	return {
 		trinketCardId: ref.bgsTrinkets.trim(),

@@ -5,7 +5,7 @@ import AWS from 'aws-sdk';
 import { InternalBgsCardStats } from '../../../internal-model';
 import { BgsCardStat } from '../../../model-cards';
 import { MmrPercentileFilter, TimePeriod } from '../../../models';
-import { loadHourlyDataFromS3 } from '../s3-loader';
+import { loadHourlyDataWithDaysFromS3 } from '../../aggregate-hourly/s3-loader';
 import { persistData } from './s3-saver';
 import { buildCardStats } from './stats-builder';
 
@@ -27,12 +27,14 @@ export default async (event, context: Context): Promise<any> => {
 	const cleanup = logBeforeTimeout(context);
 	const timePeriod: TimePeriod = event.timePeriod;
 
-	// console.log('aggregating data', timePeriod, mmrPercentile);
+	console.log('aggregating cards data', timePeriod);
 	// Build the list of files based on the timeframe, and load all of these
 	const patchInfo = await getLastBattlegroundsPatch();
 	const hourlyData: readonly InternalBgsCardStats[] = (
 		await Promise.all(
-			mmrPercentiles.map((mmrPercentile) => loadHourlyDataFromS3('card', timePeriod, mmrPercentile, patchInfo)),
+			mmrPercentiles.map((mmrPercentile) =>
+				loadHourlyDataWithDaysFromS3('card', timePeriod, mmrPercentile, patchInfo),
+			),
 		)
 	).flat();
 
@@ -44,6 +46,7 @@ export default async (event, context: Context): Promise<any> => {
 		}))
 		.sort((a, b) => b.time - a.time)[0].date;
 
+	console.log('merging stats');
 	const mergedStats: readonly BgsCardStat[] = buildCardStats(hourlyData, allCards);
 
 	await persistData(mergedStats, timePeriod, lastUpdate);

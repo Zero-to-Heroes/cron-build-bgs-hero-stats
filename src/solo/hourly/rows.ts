@@ -176,7 +176,7 @@ const processRows = async (
 					row.heroesOptions?.split(',').map((hero) => normalizeHeroCardId(hero, allCards)) ?? [],
 				playedCardsExpanded: row.playedCards != null ? JSON.parse(row.playedCards) : [],
 			};
-			delete (result as any).reviewId;
+			// delete (result as any).reviewId;
 			delete (result as any).tribes;
 			delete (result as any).heroesOptions;
 			delete (result as any).playedCards;

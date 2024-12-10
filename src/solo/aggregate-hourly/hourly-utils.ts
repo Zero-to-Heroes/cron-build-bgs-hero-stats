@@ -34,3 +34,20 @@ export const buildFileNames = (hoursBack: number): readonly string[] => {
 	}
 	return fileNames;
 };
+
+export const buildFileNamesForDay = (dayStartTime: string): readonly string[] => {
+	// Build a list of file names, in the form YYYY-MM-dd (e.g. 2020-05-01)
+	// that start from the day before the current date and go back in time
+	const fileNames: string[] = [];
+	const dayStart = new Date(dayStartTime);
+	for (let i = 0; i < 24; i++) {
+		const date = new Date(dayStart.getTime() + i * 60 * 60 * 1000);
+		date.setMinutes(0);
+		date.setSeconds(0);
+		date.setMilliseconds(0);
+		// The date in the format YYYY-MM-ddTHH:mm:ss.sssZ
+		const dateStr = date.toISOString();
+		fileNames.push(`${dateStr}`);
+	}
+	return fileNames;
+};
