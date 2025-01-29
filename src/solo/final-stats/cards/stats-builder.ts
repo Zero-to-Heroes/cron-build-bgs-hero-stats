@@ -30,8 +30,12 @@ const buildSingleCardStat = (
 	const ref = data[0];
 	const totalPlayed = data.map((d) => d.totalPlayed).reduce((a, b) => a + b, 0);
 	const totalPlacement = data.map((d) => d.totalPlayed * d.averagePlacement).reduce((a, b) => a + b, 0);
+	const totalOther = data.map((d) => d.totalOther).reduce((a, b) => a + b, 0);
+	const totalPlacementOther = data.map((d) => d.totalOther * d.averagePlacementOther).reduce((a, b) => a + b, 0);
 	const averagePlacement = totalPlacement / totalPlayed;
+	const averagePlacementOther = totalPlacementOther / totalOther;
 	const averagePlacementAtMmr: BgsCardStat['averagePlacementAtMmr'] = buildAveragePlacementAtMmr(data);
+	const averagePlacementAtMmrOther: BgsCardStat['averagePlacementAtMmrOther'] = buildAveragePlacementAtMmrOther(data);
 	const turnStats: readonly BgsCardTurnStat[] = buildTurnStats(data);
 	const heroStats: readonly BgsCardHeroStat[] = buildHeroStats(data);
 
@@ -39,7 +43,9 @@ const buildSingleCardStat = (
 		cardId: ref.cardId,
 		totalPlayed: totalPlayed,
 		averagePlacement: averagePlacement,
+		averagePlacementOther: averagePlacementOther,
 		averagePlacementAtMmr: averagePlacementAtMmr,
+		averagePlacementAtMmrOther: averagePlacementAtMmrOther,
 		turnStats: turnStats,
 		heroStats: heroStats,
 	};
@@ -56,7 +62,7 @@ const buildHeroStats = (data: readonly WithMmrAndTimePeriod<InternalBgsCardStat>
 			.map((d) => d.totalPlayedWithHero * d.averagePlacement)
 			.reduce((a, b) => a + b, 0);
 		const averagePlacement = totalPlacement / totalPlayed;
-		const averagePlacementAtMmr = [];
+		const averagePlacementAtMmr = buildAveragePlacementAtMmr(data);
 		const turnStats = buildTurnStats(relevantData);
 		const heroResult: BgsCardHeroStat = {
 			heroCardId: heroCardId,
@@ -77,15 +83,22 @@ const buildTurnStats = (
 	return Object.keys(groupedByTurn).map((turn) => {
 		const relevantData = groupedByTurn[turn];
 		const totalPlayed = relevantData.map((d) => d.totalPlayedAtTurn).reduce((a, b) => a + b, 0);
+		const totalPlayedOther = relevantData.map((d) => d.totalPlayedAtTurnOther).reduce((a, b) => a + b, 0);
 		const totalPlacement = relevantData
 			.map((d) => d.totalPlayedAtTurn * d.averagePlacement)
 			.reduce((a, b) => a + b, 0);
+		const totalPlacementOther = relevantData
+			.map((d) => d.totalPlayedAtTurnOther * d.averagePlacementOther)
+			.reduce((a, b) => a + b, 0);
 		const averagePlacement = totalPlacement / totalPlayed;
+		const averagePlacementOther = totalPlacementOther / totalPlayedOther;
 		const averagePlacementAtMmr = [];
 		const turnResult: BgsCardTurnStat = {
 			turn: parseInt(turn),
 			totalPlayedAtTurn: totalPlayed,
 			averagePlacement: averagePlacement,
+			totalPlayedAtTurnOther: totalPlayedOther,
+			averagePlacementOther: averagePlacementOther,
 			averagePlacementAtMmr: averagePlacementAtMmr,
 		};
 		return turnResult;
@@ -100,6 +113,26 @@ const buildAveragePlacementAtMmr = (
 		const relevantData = groupedByMmr[mmr];
 		const totalPlayed = relevantData.map((d) => d.totalPlayed).reduce((a, b) => a + b, 0);
 		const totalPlacement = relevantData.map((d) => d.totalPlayed * d.averagePlacement).reduce((a, b) => a + b, 0);
+		const averagePlacement = totalPlacement / totalPlayed;
+		const mmrResult: { mmr: number; placement: number } = {
+			mmr: parseInt(mmr),
+			placement: averagePlacement,
+		};
+		return mmrResult;
+	});
+	return result;
+};
+
+const buildAveragePlacementAtMmrOther = (
+	data: readonly WithMmrAndTimePeriod<InternalBgsCardStat>[],
+): BgsCardStat['averagePlacementAtMmrOther'] => {
+	const groupedByMmr = groupByFunction((data: WithMmrAndTimePeriod<InternalBgsCardStat>) => data.mmrPercentile)(data);
+	const result: BgsCardStat['averagePlacementAtMmrOther'] = Object.keys(groupedByMmr).map((mmr) => {
+		const relevantData = groupedByMmr[mmr];
+		const totalPlayed = relevantData.map((d) => d.totalOther).reduce((a, b) => a + b, 0);
+		const totalPlacement = relevantData
+			.map((d) => d.totalOther * d.averagePlacementOther)
+			.reduce((a, b) => a + b, 0);
 		const averagePlacement = totalPlacement / totalPlayed;
 		const mmrResult: { mmr: number; placement: number } = {
 			mmr: parseInt(mmr),

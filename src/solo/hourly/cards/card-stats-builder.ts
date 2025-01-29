@@ -114,12 +114,13 @@ const buildTurnStats = (
 		.sort()
 		.map((turn) => {
 			const relevantRows = groupedByTurn[turn];
+			const relevantRowsOther = groupedByTurnOther[turn] || [];
 			const result: InternalBgsCardTurnStat = {
 				turn: parseInt(turn),
 				totalPlayedAtTurn: relevantRows.length,
 				averagePlacement: average(relevantRows.map((r) => r.playerRank)),
-				totalPlayedAtTurnOther: groupedByTurnOther[turn]?.length || 0,
-				averagePlacementOther: average(groupedByTurnOther[turn]?.map((r) => r.playerRank) || []),
+				totalPlayedAtTurnOther: relevantRowsOther.length || 0,
+				averagePlacementOther: average(relevantRowsOther.map((r) => r.playerRank) || []),
 			};
 			return result;
 		});

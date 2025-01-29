@@ -11,7 +11,12 @@ export interface BgsCardStat {
 	readonly cardId: string;
 	readonly totalPlayed: number;
 	readonly averagePlacement: number;
+	readonly averagePlacementOther: number;
 	readonly averagePlacementAtMmr: readonly {
+		mmr: number;
+		placement: number;
+	}[];
+	readonly averagePlacementAtMmrOther: readonly {
 		mmr: number;
 		placement: number;
 	}[];
@@ -27,6 +32,10 @@ export interface BgsCardHeroStat {
 		mmr: number;
 		placement: number;
 	}[];
+	// readonly averagePlacementAtMmrOther: readonly {
+	// 	mmr: number;
+	// 	placement: number;
+	// }[];
 	readonly turnStats: readonly BgsCardTurnStat[];
 }
 
@@ -34,8 +43,14 @@ export interface BgsCardTurnStat {
 	readonly turn: number;
 	readonly totalPlayedAtTurn: number;
 	readonly averagePlacement: number;
+	readonly totalPlayedAtTurnOther: number;
+	readonly averagePlacementOther: number;
 	readonly averagePlacementAtMmr: readonly {
 		mmr: number;
 		placement: number;
 	}[];
+	// readonly averagePlacementAtMmrOther: readonly {
+	// 	mmr: number;
+	// 	placement: number;
+	// }[];
 }
