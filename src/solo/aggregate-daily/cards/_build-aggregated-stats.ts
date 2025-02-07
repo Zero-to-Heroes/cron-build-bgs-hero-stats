@@ -23,8 +23,15 @@ export default async (event, context: Context): Promise<any> => {
 	await allCards.initializeCardsDb();
 
 	// By default, process yesterday
-	const dayToProcess =
-		event.targetDate ?? new Date(new Date().getTime() - 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+	const dateTarget: Date = event.targetDate
+		? new Date(event.targetDate)
+		: new Date(new Date().getTime() - 24 * 60 * 60 * 1000);
+	dateTarget.setHours(0);
+	dateTarget.setMinutes(0);
+	dateTarget.setSeconds(0);
+	dateTarget.setMilliseconds(0);
+	const dayToProcess: string = dateTarget.toISOString();
+	console.debug('processing date', dayToProcess, dateTarget, dateTarget.toISOString());
 	for (const mmrPercentile of mmrPercentiles) {
 		console.log('aggregating daily cards data', dayToProcess, mmrPercentile);
 		const hourlyData: readonly InternalBgsCardStats[] = await loadHourlyDataFromS3ForDay(
@@ -41,7 +48,8 @@ export default async (event, context: Context): Promise<any> => {
 			.sort((a, b) => b.time - a.time)[0].date;
 		console.log('merging stats for day', dayToProcess, mmrPercentile);
 		const mergedStats: readonly InternalBgsCardStat[] = buildCardStats(hourlyData, allCards);
-		await persistData(mergedStats, dayToProcess, lastUpdate, mmrPercentile);
+		const totalGames = hourlyData.map((s) => s.dataPoints).reduce((a, b) => a + b, 0);
+		await persistData(mergedStats, dayToProcess, totalGames, lastUpdate, mmrPercentile);
 	}
 };
 
@@ -51,10 +59,15 @@ const dispatchCatchUpEvents = async (context: Context, numberOfDays: number) => 
 	const days = [];
 	for (let i = 0; i < numberOfDays; i++) {
 		const day = new Date(now.setDate(now.getDate() - 1));
-		const year = day.getFullYear();
-		const month = day.getMonth() + 1;
-		const dayOfMonth = day.getDate();
-		days.push(`${year}-${month}-${dayOfMonth}`);
+		day.setHours(0);
+		day.setMinutes(0);
+		day.setSeconds(0);
+		day.setMilliseconds(0);
+		// const year = day.getFullYear();
+		// const month = day.getMonth() + 1;
+		// const dayOfMonth = day.getDate();
+		days.push(day.toISOString());
+		// days.push(`${year}-${month}-${dayOfMonth}`);
 	}
 
 	for (const targetDate of days) {

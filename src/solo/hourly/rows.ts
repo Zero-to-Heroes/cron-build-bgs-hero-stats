@@ -51,7 +51,7 @@ export const readRowsFromS3 = async (startDate: string): Promise<readonly Intern
 			.on('end', () => {
 				const finalResult = result.filter((row) => !!row);
 				console.log('stream end', result.length, finalResult.length);
-				console.log('parsing errors', parseErrors, 'and successes', totalParsed);
+				console.log('parsing', parseErrors, '/', totalParsed);
 				resolve(finalResult);
 			});
 	});

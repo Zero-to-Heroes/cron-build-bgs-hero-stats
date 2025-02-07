@@ -8,13 +8,14 @@ import { s3 } from './_build-aggregated-stats';
 export const persistData = async (
 	mergedStats: readonly InternalBgsCardStat[],
 	dayStartTime: string,
+	totalGames: number,
 	lastUpdate: Date,
 	mmrPercentile: MmrPercentileFilter,
 ) => {
 	const result: InternalBgsCardStats = {
-		lastUpdateDate: new Date(),
+		lastUpdateDate: lastUpdate,
 		mmrPercentiles: [],
-		dataPoints: mergedStats.map((s) => s.totalPlayed).reduce((a, b) => a + b, 0),
+		dataPoints: totalGames,
 		cardStats: mergedStats.map((stat) => ({
 			...stat,
 			mmrPercentile: mmrPercentile,
@@ -22,6 +23,14 @@ export const persistData = async (
 		})),
 	};
 	// console.log('persisting data', stat.dataPoints, stat.heroStats?.length);
+	if (mmrPercentile === 100) {
+		console.debug(
+			'Bubble Gunner daily',
+			result.cardStats.find((s) => s.cardId === 'BG31_149')?.turnStats?.find((t) => t.turn === 1)?.totalPlayed,
+			dayStartTime,
+			mmrPercentile,
+		);
+	}
 	await s3.writeFile(
 		gzipSync(JSON.stringify(result)),
 		STATS_BUCKET,

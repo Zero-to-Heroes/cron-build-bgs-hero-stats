@@ -70,13 +70,7 @@ export const handleNewStats = async (event, context: Context) => {
 		);
 	} else if (event.cards) {
 		const lastHourRows: readonly InternalBgsRow[] = await readRowsFromS3(event.startDate);
-		console.log(
-			'building card stats',
-			event.startDate,
-			event.mmr,
-			lastHourRows?.length,
-			lastHourRows[lastHourRows.length - 1],
-		);
+		console.log('building card stats', event.startDate, event.mmr, lastHourRows?.length);
 		await buildCardStats(event.startDate, event.mmr, lastHourRows, allCards, STATS_BUCKET, HOURLY_KEY_CARD, s3);
 	}
 
@@ -92,9 +86,9 @@ const dispatchMainEvents = async (context: Context, event) => {
 	await saveRowsOnS3(startDate, endDate, allCards);
 
 	await dispatchStatsV2Lambda(context, startDate);
-	// await dispatchQuestsV2Lambda(context, startDate);
 	await dispatchTrinketsLambda(context, startDate);
 	await dispatchCardsLambda(context, startDate);
+	// await dispatchQuestsV2Lambda(context, startDate);
 };
 
 const buildProcessStartDate = (event): Date => {

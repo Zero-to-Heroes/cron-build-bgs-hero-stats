@@ -30,29 +30,37 @@ export const buildCardStatsForMmr = (
 	});
 	console.debug('denormalized into', denormalized.length, 'rows');
 	const groupedByCardPlayed = groupByFunction((r: InternalBgsRow) => r.playedCardsExpanded[0].cardId)(denormalized);
-	return Object.keys(groupedByCardPlayed)
-		.sort()
-		.map((cardId) => {
-			const relevantRows = groupedByCardPlayed[cardId];
-			return buildStatsForSingleCard(relevantRows, denormalized);
-		});
+	console.debug('groupedByCardPlayed');
+	const keys = Object.keys(groupedByCardPlayed).sort();
+	console.debug('keys', keys);
+	const groupedByReviewId = groupByFunction((r: InternalBgsRow) => r.reviewId)(denormalized);
+	console.debug('groupedByReviewId');
+	return keys.map((cardId) => {
+		const relevantRows = groupedByCardPlayed[cardId];
+		return buildStatsForSingleCard(relevantRows, groupedByReviewId);
+	});
 };
 
 // All rows here belong to a single card
 const buildStatsForSingleCard = (
 	rows: readonly InternalBgsRow[],
-	allRows: readonly InternalBgsRow[],
+	// allRows: readonly InternalBgsRow[],
+	groupedByReviewId: { [reviewId: string]: readonly InternalBgsRow[] },
 ): InternalBgsCardStat => {
 	const ref = rows[0];
 
 	// console.debug('building stats for', ref.playedCardsExpanded[0].cardId);
 	const relevantReviewIds = rows.map((r) => r.reviewId);
-	const otherRows = allRows.filter((r) => !relevantReviewIds.includes(r.reviewId));
+	// const otherRows = allRows.filter((r) => !relevantReviewIds.includes(r.reviewId));
 	// console.debug('mapped other rows', ref.playedCardsExpanded[0].cardId, rows.length, otherRows.length);
-	const otherGroupedByReviewId = groupByFunction((r: InternalBgsRow) => r.reviewId)(otherRows);
+	// const otherGroupedByReviewId = groupByFunction((r: InternalBgsRow) => r.reviewId)(otherRows);
 	// console.debug('grouped other rows');
 	// Keep only one row per reviewId
-	const finalOtherRows = Object.values(otherGroupedByReviewId).map((r) => r[0]);
+	const finalOtherRows = Object.keys(groupedByReviewId)
+		.filter((reviewId) => !relevantReviewIds.includes(reviewId))
+		.map((k) => groupedByReviewId[k][0]);
+
+	// ? Object.values(otherGroupedByReviewId).map((r) => r[0]);
 	// console.debug('final other rows');
 
 	const averagePlacement = average(rows.map((r) => r.playerRank));
@@ -70,7 +78,7 @@ const buildStatsForSingleCard = (
 		totalOther: finalOtherRows.length,
 		averagePlacementOther: averagePlacementOther,
 		turnStats: turnStats,
-		heroStats: heroStats,
+		// heroStats: heroStats,
 	};
 	return result;
 };
@@ -117,9 +125,9 @@ const buildTurnStats = (
 			const relevantRowsOther = groupedByTurnOther[turn] || [];
 			const result: InternalBgsCardTurnStat = {
 				turn: parseInt(turn),
-				totalPlayedAtTurn: relevantRows.length,
+				totalPlayed: relevantRows.length,
 				averagePlacement: average(relevantRows.map((r) => r.playerRank)),
-				totalPlayedAtTurnOther: relevantRowsOther.length || 0,
+				totalOther: relevantRowsOther.length || 0,
 				averagePlacementOther: average(relevantRowsOther.map((r) => r.playerRank) || []),
 			};
 			return result;

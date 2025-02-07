@@ -58,7 +58,8 @@ export interface InternalBgsCardStat {
 	readonly totalOther: number;
 	readonly averagePlacementOther: number;
 	readonly turnStats: readonly InternalBgsCardTurnStat[];
-	readonly heroStats: readonly InternalBgsCardHeroStat[];
+	// Not tested yet, there are some error in heroStats.turnStats.totalOther, which is always 0
+	// readonly heroStats: readonly InternalBgsCardHeroStat[];
 }
 
 export interface InternalBgsCardHeroStat {
@@ -70,9 +71,9 @@ export interface InternalBgsCardHeroStat {
 
 export interface InternalBgsCardTurnStat {
 	readonly turn: number;
-	readonly totalPlayedAtTurn: number;
+	readonly totalPlayed: number;
 	readonly averagePlacement: number;
-	readonly totalPlayedAtTurnOther: number;
+	readonly totalOther: number;
 	readonly averagePlacementOther: number;
 }
 

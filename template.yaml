@@ -12,8 +12,8 @@ Resources:
             Runtime: nodejs18.x
             Timeout: 880
             CodeUri: ./dist/solo/hourly/_build-battlegrounds-hero-stats
-            MemorySize: 4000
-            ReservedConcurrentExecutions: 5
+            MemorySize: 8000
+            ReservedConcurrentExecutions: 15
             Layers:
                 - !Sub "arn:aws:lambda:${AWS::Region}:580247275435:layer:LambdaInsightsExtension:14"
             Policies:

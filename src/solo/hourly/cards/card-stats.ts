@@ -34,6 +34,13 @@ export const buildCardStats = async (
 	};
 	// logger.log('\tbuilt stats', statsV2.dataPoints, statsV2.heroStats?.length);
 	const destination = key.replace('%mmrPercentile%', `${percentile}`).replace('%startDate%', startDate);
+	if (percentile === 100) {
+		console.debug(
+			'Bubble Gunner hourly',
+			result.cardStats.find((s) => s.cardId === 'BG31_149')?.turnStats?.find((t) => t.turn === 1)?.totalPlayed,
+			percentile,
+		);
+	}
 	await s3.writeFile(gzipSync(JSON.stringify(result)), bucket, destination, 'application/json', 'gzip');
 	// console.log('written file', destination);
 };

@@ -6,10 +6,10 @@ import {
 	InternalBgsCardStats,
 	InternalBgsCardTurnStat,
 } from '../../../internal-model';
-import { BgsCardHeroStat, BgsCardStat, BgsCardTurnStat } from '../../../model-cards';
+import { BgsCardStat, BgsCardTurnStat } from '../../../model-cards';
 import { WithMmrAndTimePeriod } from '../../../models';
 
-// These should all be for a single MMR
+// Single time period, multiple MMR
 export const buildCardStats = (
 	hourlyData: readonly InternalBgsCardStats[],
 	allCards: AllCardsService,
@@ -23,122 +23,178 @@ export const buildCardStats = (
 	return Object.keys(groupedByCard).map((cardId) => buildSingleCardStat(groupedByCard[cardId], allCards));
 };
 
+// Single time period, multiple MMR
 const buildSingleCardStat = (
 	data: readonly WithMmrAndTimePeriod<InternalBgsCardStat>[],
 	allCards: AllCardsService,
 ): BgsCardStat => {
 	const ref = data[0];
-	const totalPlayed = data.map((d) => d.totalPlayed).reduce((a, b) => a + b, 0);
-	const totalPlacement = data.map((d) => d.totalPlayed * d.averagePlacement).reduce((a, b) => a + b, 0);
-	const totalOther = data.map((d) => d.totalOther).reduce((a, b) => a + b, 0);
-	const totalPlacementOther = data.map((d) => d.totalOther * d.averagePlacementOther).reduce((a, b) => a + b, 0);
+
+	const totalPlayed = data
+		.filter((d) => d.averagePlacement != null && d.totalPlayed != null)
+		.map((d) => d.totalPlayed)
+		.reduce((a, b) => a + b, 0);
+	const totalPlacement = data
+		.filter((d) => d.averagePlacement != null && d.totalPlayed != null)
+		.map((d) => d.totalPlayed * d.averagePlacement)
+		.reduce((a, b) => a + b, 0);
+
+	const totalOther = data
+		.filter((d) => d.averagePlacementOther != null && d.totalOther != null)
+		.map((d) => d.totalOther)
+		.reduce((a, b) => a + b, 0);
+	const totalPlacementOther = data
+		.filter((d) => d.averagePlacementOther != null && d.totalOther != null)
+		.map((d) => d.totalOther * d.averagePlacementOther)
+		.reduce((a, b) => a + b, 0);
 	const averagePlacement = totalPlacement / totalPlayed;
 	const averagePlacementOther = totalPlacementOther / totalOther;
-	const averagePlacementAtMmr: BgsCardStat['averagePlacementAtMmr'] = buildAveragePlacementAtMmr(data);
-	const averagePlacementAtMmrOther: BgsCardStat['averagePlacementAtMmrOther'] = buildAveragePlacementAtMmrOther(data);
+
+	// const averagePlacementAtMmr: BgsCardStat['averagePlacementAtMmr'] = buildAveragePlacementAtMmr(data);
+	// const averagePlacementAtMmrOther: BgsCardStat['averagePlacementAtMmrOther'] = buildAveragePlacementAtMmrOther(data);
 	const turnStats: readonly BgsCardTurnStat[] = buildTurnStats(data);
-	const heroStats: readonly BgsCardHeroStat[] = buildHeroStats(data);
+	// const heroStats: readonly BgsCardHeroStat[] = buildHeroStats(data);
 
 	const result: BgsCardStat = {
 		cardId: ref.cardId,
 		totalPlayed: totalPlayed,
 		averagePlacement: averagePlacement,
 		averagePlacementOther: averagePlacementOther,
-		averagePlacementAtMmr: averagePlacementAtMmr,
-		averagePlacementAtMmrOther: averagePlacementAtMmrOther,
+		// averagePlacementAtMmr: averagePlacementAtMmr,
+		// averagePlacementAtMmrOther: averagePlacementAtMmrOther,
 		turnStats: turnStats,
-		heroStats: heroStats,
+		// heroStats: heroStats,
 	};
 	return result;
 };
 
-const buildHeroStats = (data: readonly WithMmrAndTimePeriod<InternalBgsCardStat>[]): readonly BgsCardHeroStat[] => {
-	const allHeroStats = data.flatMap((d) => d.heroStats);
-	const groupedByHero = groupByFunction((data: InternalBgsCardHeroStat) => data.heroCardId)(allHeroStats);
-	return Object.keys(groupedByHero).map((heroCardId) => {
-		const relevantData = groupedByHero[heroCardId];
-		const totalPlayed = relevantData.map((d) => d.totalPlayedWithHero).reduce((a, b) => a + b, 0);
-		const totalPlacement = relevantData
-			.map((d) => d.totalPlayedWithHero * d.averagePlacement)
-			.reduce((a, b) => a + b, 0);
-		const averagePlacement = totalPlacement / totalPlayed;
-		const averagePlacementAtMmr = buildAveragePlacementAtMmr(data);
-		const turnStats = buildTurnStats(relevantData);
-		const heroResult: BgsCardHeroStat = {
-			heroCardId: heroCardId,
-			totalPlayedWithHero: totalPlayed,
-			averagePlacement: averagePlacement,
-			averagePlacementAtMmr: averagePlacementAtMmr,
-			turnStats: turnStats,
-		};
-		return heroResult;
-	});
-};
+// const buildHeroStats = (data: readonly WithMmrAndTimePeriod<InternalBgsCardStat>[]): readonly BgsCardHeroStat[] => {
+// 	const allHeroStats: readonly WithMmrAndTimePeriod<InternalBgsCardHeroStat>[] = data.flatMap((d) =>
+// 		d.heroStats.map((s) => ({
+// 			...s,
+// 			mmrPercentile: d.mmrPercentile,
+// 			timePeriod: d.timePeriod,
+// 		})),
+// 	);
+// 	const groupedByHero = groupByFunction((data: WithMmrAndTimePeriod<InternalBgsCardHeroStat>) => data.heroCardId)(
+// 		allHeroStats,
+// 	);
+// 	return Object.keys(groupedByHero).map((heroCardId) => {
+// 		const relevantData = groupedByHero[heroCardId];
+// 		const totalPlayed = relevantData.map((d) => d.totalPlayedWithHero ?? 0).reduce((a, b) => a + b, 0);
+// 		const totalPlacement = relevantData
+// 			.filter((d) => d.averagePlacement != null && d.totalPlayedWithHero != null)
+// 			.map((d) => d.totalPlayedWithHero * d.averagePlacement)
+// 			.reduce((a, b) => a + b, 0);
+// 		const averagePlacement = totalPlacement / totalPlayed;
+// 		// const averagePlacementAtMmr: BgsCardStat['averagePlacementAtMmr'] = buildAveragePlacementAtMmr(data);
+// 		// const averagePlacementAtMmrOther: BgsCardStat['averagePlacementAtMmrOther'] =
+// 		// buildAveragePlacementAtMmrOther(data);
+// 		const turnStats = buildTurnStats(relevantData);
+// 		const heroResult: BgsCardHeroStat = {
+// 			heroCardId: heroCardId,
+// 			totalPlayedWithHero: totalPlayed,
+// 			averagePlacement: averagePlacement,
+// 			// averagePlacementAtMmr: averagePlacementAtMmr,
+// 			// averagePlacementAtMmrOther: averagePlacementAtMmrOther,
+// 			turnStats: turnStats,
+// 		};
+// 		return heroResult;
+// 	});
+// };
 
 const buildTurnStats = (
-	data: readonly { turnStats: readonly InternalBgsCardTurnStat[] }[],
+	data: readonly WithMmrAndTimePeriod<InternalBgsCardStat | InternalBgsCardHeroStat>[],
 ): readonly BgsCardTurnStat[] => {
-	const allTurnStats = data.flatMap((d) => d.turnStats);
-	const groupedByTurn = groupByFunction((data: InternalBgsCardTurnStat) => data.turn)(allTurnStats);
+	const allTurnStats: readonly WithMmrAndTimePeriod<InternalBgsCardTurnStat>[] = data.flatMap((d) =>
+		d.turnStats.map((s) => ({
+			...s,
+			mmrPercentile: d.mmrPercentile,
+			timePeriod: d.timePeriod,
+		})),
+	);
+	const groupedByTurn = groupByFunction((data: WithMmrAndTimePeriod<InternalBgsCardTurnStat>) => data.turn)(
+		allTurnStats,
+	);
 	return Object.keys(groupedByTurn).map((turn) => {
 		const relevantData = groupedByTurn[turn];
-		const totalPlayed = relevantData.map((d) => d.totalPlayedAtTurn).reduce((a, b) => a + b, 0);
-		const totalPlayedOther = relevantData.map((d) => d.totalPlayedAtTurnOther).reduce((a, b) => a + b, 0);
-		const totalPlacement = relevantData
-			.map((d) => d.totalPlayedAtTurn * d.averagePlacement)
+
+		const totalPlayed = relevantData
+			.filter((d) => d.averagePlacement != null && d.totalPlayed != null)
+			.map((d) => d.totalPlayed)
 			.reduce((a, b) => a + b, 0);
-		const totalPlacementOther = relevantData
-			.map((d) => d.totalPlayedAtTurnOther * d.averagePlacementOther)
+		const totalPlacement = relevantData
+			.filter((d) => d.averagePlacement != null && d.totalPlayed != null)
+			.map((d) => d.totalPlayed * d.averagePlacement)
 			.reduce((a, b) => a + b, 0);
 		const averagePlacement = totalPlacement / totalPlayed;
+
+		const totalPlayedOther = relevantData
+			.filter((d) => d.averagePlacementOther != null && d.totalOther != null)
+			.map((d) => d.totalOther)
+			.reduce((a, b) => a + b, 0);
+		const totalPlacementOther = relevantData
+			.filter((d) => d.averagePlacementOther != null && d.totalOther != null)
+			.map((d) => d.totalOther * d.averagePlacementOther)
+			.reduce((a, b) => a + b, 0);
 		const averagePlacementOther = totalPlacementOther / totalPlayedOther;
-		const averagePlacementAtMmr = [];
+
+		// const averagePlacementAtMmr: BgsCardStat['averagePlacementAtMmr'] = buildAveragePlacementAtMmr(relevantData);
+		// const averagePlacementAtMmrOther: BgsCardStat['averagePlacementAtMmrOther'] =
+		// 	buildAveragePlacementAtMmrOther(relevantData);
 		const turnResult: BgsCardTurnStat = {
 			turn: parseInt(turn),
-			totalPlayedAtTurn: totalPlayed,
+			totalPlayed: totalPlayed,
 			averagePlacement: averagePlacement,
-			totalPlayedAtTurnOther: totalPlayedOther,
+			totalOther: totalPlayedOther,
 			averagePlacementOther: averagePlacementOther,
-			averagePlacementAtMmr: averagePlacementAtMmr,
+			// averagePlacementAtMmr: averagePlacementAtMmr,
+			// averagePlacementAtMmrOther: averagePlacementAtMmrOther,
 		};
 		return turnResult;
 	});
 };
 
-const buildAveragePlacementAtMmr = (
-	data: readonly WithMmrAndTimePeriod<InternalBgsCardStat>[],
-): BgsCardStat['averagePlacementAtMmr'] => {
-	const groupedByMmr = groupByFunction((data: WithMmrAndTimePeriod<InternalBgsCardStat>) => data.mmrPercentile)(data);
-	const result: BgsCardStat['averagePlacementAtMmr'] = Object.keys(groupedByMmr).map((mmr) => {
-		const relevantData = groupedByMmr[mmr];
-		const totalPlayed = relevantData.map((d) => d.totalPlayed).reduce((a, b) => a + b, 0);
-		const totalPlacement = relevantData.map((d) => d.totalPlayed * d.averagePlacement).reduce((a, b) => a + b, 0);
-		const averagePlacement = totalPlacement / totalPlayed;
-		const mmrResult: { mmr: number; placement: number } = {
-			mmr: parseInt(mmr),
-			placement: averagePlacement,
-		};
-		return mmrResult;
-	});
-	return result;
-};
+// const buildAveragePlacementAtMmr = (
+// 	data: readonly WithMmrAndTimePeriod<InternalBgsCardStat | InternalBgsCardTurnStat>[],
+// ): BgsCardStat['averagePlacementAtMmr'] => {
+// 	const groupedByMmr = groupByFunction(
+// 		(data: WithMmrAndTimePeriod<InternalBgsCardStat | InternalBgsCardTurnStat>) => data.mmrPercentile,
+// 	)(data);
+// 	const result: BgsCardStat['averagePlacementAtMmr'] = Object.keys(groupedByMmr).map((mmr) => {
+// 		const relevantData = groupedByMmr[mmr];
+// 		const totalPlayed = relevantData.map((d) => d.totalPlayed).reduce((a, b) => a + b, 0);
+// 		const totalPlacement = relevantData.map((d) => d.totalPlayed * d.averagePlacement).reduce((a, b) => a + b, 0);
+// 		const averagePlacement = totalPlacement / totalPlayed;
+// 		const mmrResult: PlacementAtMmr = {
+// 			mmr: parseInt(mmr),
+// 			totalPlayed: totalPlayed,
+// 			placement: averagePlacement,
+// 		};
+// 		return mmrResult;
+// 	});
+// 	return result;
+// };
 
-const buildAveragePlacementAtMmrOther = (
-	data: readonly WithMmrAndTimePeriod<InternalBgsCardStat>[],
-): BgsCardStat['averagePlacementAtMmrOther'] => {
-	const groupedByMmr = groupByFunction((data: WithMmrAndTimePeriod<InternalBgsCardStat>) => data.mmrPercentile)(data);
-	const result: BgsCardStat['averagePlacementAtMmrOther'] = Object.keys(groupedByMmr).map((mmr) => {
-		const relevantData = groupedByMmr[mmr];
-		const totalPlayed = relevantData.map((d) => d.totalOther).reduce((a, b) => a + b, 0);
-		const totalPlacement = relevantData
-			.map((d) => d.totalOther * d.averagePlacementOther)
-			.reduce((a, b) => a + b, 0);
-		const averagePlacement = totalPlacement / totalPlayed;
-		const mmrResult: { mmr: number; placement: number } = {
-			mmr: parseInt(mmr),
-			placement: averagePlacement,
-		};
-		return mmrResult;
-	});
-	return result;
-};
+// const buildAveragePlacementAtMmrOther = (
+// 	data: readonly WithMmrAndTimePeriod<InternalBgsCardStat | InternalBgsCardTurnStat>[],
+// ): BgsCardStat['averagePlacementAtMmrOther'] => {
+// 	const groupedByMmr = groupByFunction(
+// 		(data: WithMmrAndTimePeriod<InternalBgsCardStat | InternalBgsCardTurnStat>) => data.mmrPercentile,
+// 	)(data);
+// 	const result: BgsCardStat['averagePlacementAtMmrOther'] = Object.keys(groupedByMmr).map((mmr) => {
+// 		const relevantData = groupedByMmr[mmr];
+// 		const totalPlayed = relevantData.map((d) => d.totalOther).reduce((a, b) => a + b, 0);
+// 		const totalPlacement = relevantData
+// 			.map((d) => d.totalOther * d.averagePlacementOther)
+// 			.reduce((a, b) => a + b, 0);
+// 		const averagePlacement = totalPlacement / totalPlayed;
+// 		const mmrResult: PlacementAtMmr = {
+// 			mmr: parseInt(mmr),
+// 			totalPlayed: totalPlayed,
+// 			placement: averagePlacement,
+// 		};
+// 		return mmrResult;
+// 	});
+// 	return result;
+// };

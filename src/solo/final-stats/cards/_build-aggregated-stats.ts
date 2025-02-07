@@ -19,62 +19,97 @@ export const mmrPercentiles: readonly MmrPercentileFilter[] = [100, 50, 25, 10, 
 export default async (event, context: Context): Promise<any> => {
 	await allCards.initializeCardsDb();
 
-	if (!event.timePeriod) {
+	if (event.timePeriod == null) {
 		await dispatchEvents(context);
 		return;
 	}
 
 	const cleanup = logBeforeTimeout(context);
 	const timePeriod: TimePeriod = event.timePeriod;
+	const mmrPercentile: MmrPercentileFilter | null = event.mmrPercentile;
 
-	console.log('aggregating cards data', timePeriod);
+	console.log('aggregating cards data', timePeriod, mmrPercentile);
 	// Build the list of files based on the timeframe, and load all of these
 	const patchInfo = await getLastBattlegroundsPatch();
-	const hourlyData: readonly InternalBgsCardStats[] = (
-		await Promise.all(
-			mmrPercentiles.map((mmrPercentile) =>
-				loadHourlyDataWithDaysFromS3('card', timePeriod, mmrPercentile, patchInfo),
-			),
-		)
-	).flat();
 
-	const lastUpdate = hourlyData
-		.map((d) => ({
-			date: new Date(d.lastUpdateDate),
-			dateStr: d.lastUpdateDate,
-			time: new Date(d.lastUpdateDate).getTime(),
-		}))
-		.sort((a, b) => b.time - a.time)[0].date;
-
-	console.log('merging stats');
-	const mergedStats: readonly BgsCardStat[] = buildCardStats(hourlyData, allCards);
-
-	await persistData(mergedStats, timePeriod, lastUpdate);
-	cleanup();
+	// Legacy
+	if (mmrPercentile == null) {
+		const allHourlyData: readonly InternalBgsCardStats[] = (
+			await Promise.all(
+				mmrPercentiles.map((mmrPercentile) =>
+					loadHourlyDataWithDaysFromS3('card', timePeriod, mmrPercentile, patchInfo),
+				),
+			)
+		).flat();
+		const lastUpdate = allHourlyData
+			.map((d) => ({
+				date: new Date(d.lastUpdateDate),
+				dateStr: d.lastUpdateDate,
+				time: new Date(d.lastUpdateDate).getTime(),
+			}))
+			.sort((a, b) => b.time - a.time)[0].date;
+		const mergedStats: readonly BgsCardStat[] = buildCardStats(allHourlyData, allCards);
+		const totalGames = allHourlyData.map((s) => s.dataPoints).reduce((a, b) => a + b, 0);
+		await persistData(mergedStats, mmrPercentile, timePeriod, totalGames, lastUpdate);
+		cleanup();
+	}
+	// Split by MMR in each file
+	else {
+		const hourlyDataForMmr = await loadHourlyDataWithDaysFromS3('card', timePeriod, mmrPercentile, patchInfo);
+		console.debug(
+			'games played',
+			hourlyDataForMmr.map((s) => s.dataPoints),
+		);
+		if (mmrPercentile === 100) {
+			console.debug(
+				'Bubble Gunner daily over time',
+				hourlyDataForMmr.flatMap(
+					(h) =>
+						h.cardStats.find((s) => s.cardId === 'BG31_149')?.turnStats?.find((t) => t.turn === 1)
+							?.totalPlayed,
+				),
+				mmrPercentile,
+			);
+		}
+		const lastUpdate = hourlyDataForMmr
+			.map((d) => ({
+				date: new Date(d.lastUpdateDate),
+				dateStr: d.lastUpdateDate,
+				time: new Date(d.lastUpdateDate).getTime(),
+			}))
+			.sort((a, b) => b.time - a.time)[0].date;
+		const mergedStatsForMmr: readonly BgsCardStat[] = buildCardStats(hourlyDataForMmr, allCards);
+		const totalGames = hourlyDataForMmr.map((s) => s.dataPoints).reduce((a, b) => a + b, 0);
+		await persistData(mergedStatsForMmr, mmrPercentile, timePeriod, totalGames, lastUpdate);
+		cleanup();
+	}
 };
 
 const dispatchEvents = async (context: Context) => {
-	console.log('dispatching events');
 	for (const timePeriod of allTimePeriod) {
-		const newEvent = {
-			timePeriod: timePeriod,
-		};
-		const params = {
-			FunctionName: context.functionName,
-			InvocationType: 'Event',
-			LogType: 'Tail',
-			Payload: JSON.stringify(newEvent),
-		};
-		// console.log('\tinvoking lambda', params);
-		const result = await lambda
-			.invoke({
+		for (const mmrPercentile of [null, ...mmrPercentiles]) {
+			console.log('dispatching event', timePeriod, mmrPercentile);
+			const newEvent = {
+				timePeriod: timePeriod,
+				mmrPercentile: mmrPercentile,
+			};
+			const params = {
 				FunctionName: context.functionName,
 				InvocationType: 'Event',
 				LogType: 'Tail',
 				Payload: JSON.stringify(newEvent),
-			})
-			.promise();
-		// console.log('\tinvocation result', result);
-		await sleep(50);
+			};
+			// console.log('\tinvoking lambda', params);
+			const result = await lambda
+				.invoke({
+					FunctionName: context.functionName,
+					InvocationType: 'Event',
+					LogType: 'Tail',
+					Payload: JSON.stringify(newEvent),
+				})
+				.promise();
+			// console.log('\tinvocation result', result);
+			await sleep(50);
+		}
 	}
 };
