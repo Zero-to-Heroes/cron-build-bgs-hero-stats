@@ -9,9 +9,11 @@ import { buildMmrPercentiles } from './utils';
 export const buildHeroStats = async (
 	startDate: string,
 	percentile: 100 | 50 | 25 | 10 | 1,
-	rows: readonly InternalBgsRow[],
+	anomaly: string | null,
+	inputRows: readonly InternalBgsRow[],
 	allCards: AllCardsService,
 ) => {
+	const rows = anomaly == null ? inputRows : inputRows.filter((row) => row.bgsAnomalies?.includes(anomaly));
 	const mmrPercentiles: readonly MmrPercentile[] = buildMmrPercentiles(rows);
 	const mmrPercentile = mmrPercentiles.find((p) => p.percentile === percentile);
 	const mmrRows = rows.filter((row) => mmrPercentile.percentile === 100 || row.rating >= mmrPercentile.mmr);
@@ -28,7 +30,9 @@ export const buildHeroStats = async (
 		dataPoints: heroStats.map((s) => s.dataPoints).reduce((a, b) => a + b, 0),
 	};
 	// logger.log('\tbuilt stats', statsV2.dataPoints, statsV2.heroStats?.length);
-	const destination = HOURLY_KEY_HERO.replace('%mmrPercentile%', `${percentile}`).replace('%startDate%', startDate);
+	const destination = HOURLY_KEY_HERO.replace('%anomaly%', anomaly ? `anomalies/${anomaly}/` : '')
+		.replace('%mmrPercentile%', `${percentile}`)
+		.replace('%startDate%', startDate);
 	await s3.writeFile(gzipSync(JSON.stringify(statsV2)), STATS_BUCKET, destination, 'application/json', 'gzip');
 	// console.log('written file', destination);
 };

@@ -18,7 +18,7 @@ const allMmrPercentiles: (100 | 50 | 25 | 10 | 1)[] = [100, 50, 25, 10, 1];
 export const STATS_BUCKET = 'static.zerotoheroes.com';
 export const STATS_KEY_PREFIX = `api/bgs`;
 export const WORKING_ROWS_FILE = `${STATS_KEY_PREFIX}/working/working-rows-%time%.json`;
-export const HOURLY_KEY_HERO = `${STATS_KEY_PREFIX}/hero-stats/mmr-%mmrPercentile%/hourly/%startDate%.gz.json`;
+export const HOURLY_KEY_HERO = `${STATS_KEY_PREFIX}/hero-stats/%anomaly%mmr-%mmrPercentile%/hourly/%startDate%.gz.json`;
 export const HOURLY_KEY_QUEST = `${STATS_KEY_PREFIX}/quest-stats/mmr-%mmrPercentile%/hourly/%startDate%.gz.json`;
 export const HOURLY_KEY_TRINKET = `${STATS_KEY_PREFIX}/trinket-stats/mmr-%mmrPercentile%/hourly/%startDate%.gz.json`;
 export const HOURLY_KEY_CARD = `${STATS_KEY_PREFIX}/card-stats/mmr-%mmrPercentile%/hourly/%startDate%.gz.json`;
@@ -54,8 +54,17 @@ export const handleNewStats = async (event, context: Context) => {
 	// } else
 	if (event.statsV2) {
 		const lastHourRows: readonly InternalBgsRow[] = await readRowsFromS3(event.startDate);
-		console.log('building hero stats', event.startDate, event.mmr, lastHourRows?.length);
-		await buildHeroStats(event.startDate, event.mmr, lastHourRows, allCards);
+		const uniqueAnomalies = [
+			null,
+			...lastHourRows
+				.flatMap((r) => r.bgsAnomalies?.split(','))
+				.filter((a) => a)
+				.filter((value, index, self) => self.indexOf(value) === index),
+		];
+		for (const anomaly of uniqueAnomalies) {
+			console.log('building hero stats', event.startDate, event.mmr, lastHourRows?.length, anomaly);
+			await buildHeroStats(event.startDate, event.mmr, anomaly, lastHourRows, allCards);
+		}
 	} else if (event.trinkets) {
 		const lastHourRows: readonly InternalBgsRow[] = await readRowsFromS3(event.startDate);
 		console.log('building trinket stats', event.startDate, event.mmr, lastHourRows?.length);

@@ -37,6 +37,7 @@ export default async (event, context: Context): Promise<any> => {
 		const hourlyData: readonly InternalBgsCardStats[] = await loadHourlyDataFromS3ForDay(
 			'card',
 			dayToProcess,
+			null,
 			mmrPercentile,
 		);
 		const lastUpdate = hourlyData

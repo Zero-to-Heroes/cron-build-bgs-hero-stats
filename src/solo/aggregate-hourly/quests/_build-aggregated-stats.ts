@@ -33,6 +33,7 @@ export default async (event, context: Context): Promise<any> => {
 		'quest',
 		timePeriod,
 		mmrPercentile,
+		null,
 		patchInfo,
 	);
 	// console.log('hourlyData', hourlyData.length);

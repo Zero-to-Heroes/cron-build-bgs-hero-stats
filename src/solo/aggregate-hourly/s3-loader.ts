@@ -29,6 +29,7 @@ export const loadHourlyDataFromS3 = async <T extends DataType>(
 	type: T,
 	timePeriod: TimePeriod,
 	mmrPercentile: MmrPercentileFilter,
+	anomaly: string | null,
 	patchInfo: PatchInfo,
 ): Promise<readonly DataResult<T>[]> => {
 	const hoursBack: number = computeHoursBackFromNow(timePeriod, patchInfo);
@@ -36,7 +37,7 @@ export const loadHourlyDataFromS3 = async <T extends DataType>(
 	const fileNames: readonly string[] = buildFileNames(hoursBack);
 	console.debug('fileNames', fileNames.length, hoursBack, timePeriod, mmrPercentile);
 	const fileResults = await Promise.all(
-		fileNames.map((fileName) => loadHourlyDeckStatFromS3(type, mmrPercentile, fileName)),
+		fileNames.map((fileName) => loadHourlyDeckStatFromS3(type, anomaly, mmrPercentile, fileName)),
 	);
 	console.log('fileResults', fileResults.length, fileResults.filter((result) => !!result).length);
 	return fileResults.filter((result) => !!result);
@@ -202,12 +203,13 @@ const computeStartDate = (timePeriod: TimePeriod, patchInfo: PatchInfo): Date =>
 export const loadHourlyDataFromS3ForDay = async <T extends DataType>(
 	type: T,
 	dayStartTime: string,
+	anomaly: string | null,
 	mmrPercentile: MmrPercentileFilter,
 ): Promise<readonly DataResult<T>[]> => {
 	const fileNames: readonly string[] = buildFileNamesForDay(dayStartTime);
-	console.debug('fileNames', fileNames);
+	// console.debug('fileNames', fileNames);
 	const fileResults = await Promise.all(
-		fileNames.map((fileName) => loadHourlyDeckStatFromS3(type, mmrPercentile, fileName)),
+		fileNames.map((fileName) => loadHourlyDeckStatFromS3(type, anomaly, mmrPercentile, fileName)),
 	);
 	console.log('fileResults', fileResults.length, fileResults.filter((result) => !!result).length);
 	return fileResults.filter((result) => !!result);
@@ -215,6 +217,7 @@ export const loadHourlyDataFromS3ForDay = async <T extends DataType>(
 
 const loadHourlyDeckStatFromS3 = async <T extends DataType>(
 	type: T,
+	anomaly: string | null,
 	mmrPercentile: MmrPercentileFilter,
 	fileName: string,
 ): Promise<DataResult<T>> => {
@@ -228,7 +231,11 @@ const loadHourlyDeckStatFromS3 = async <T extends DataType>(
 			: type === 'card'
 			? HOURLY_KEY_CARD
 			: null;
-	const fileKey = mainKey.replace('%mmrPercentile%', `${mmrPercentile}`).replace('%startDate%', fileName);
+	const fileKey = mainKey
+		.replace('%anomaly%', anomaly ? `anomalies/${anomaly}/` : '')
+		.replace('%mmrPercentile%', `${mmrPercentile}`)
+		.replace('%startDate%', fileName);
+	// console.debug('loading file', fileKey);
 	const data = await s3.readGzipContent(STATS_BUCKET, fileKey, 1, false);
 	const result: DataResult<T> = JSON.parse(data);
 	return result;

@@ -33,7 +33,7 @@ export default async (event, context: Context): Promise<any> => {
 	const hourlyData: readonly InternalBgsTrinketStats[] = (
 		await Promise.all(
 			mmrPercentiles.map((mmrPercentile) =>
-				loadHourlyDataFromS3('trinket', timePeriod, mmrPercentile, patchInfo),
+				loadHourlyDataFromS3('trinket', timePeriod, mmrPercentile, null, patchInfo),
 			),
 		)
 	).flat();
