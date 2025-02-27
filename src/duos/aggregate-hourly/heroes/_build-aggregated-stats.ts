@@ -2,10 +2,12 @@ import { S3, getLastBattlegroundsPatch, logBeforeTimeout, sleep } from '@firesto
 import { AllCardsService } from '@firestone-hs/reference-data';
 import { Context } from 'aws-lambda';
 import AWS from 'aws-sdk';
+import { readAllAnomalies } from '../../../common/anomalies';
 import { BgsGlobalHeroStat, BgsHeroStatsV2, MmrPercentile, MmrPercentileFilter, TimePeriod } from '../../../models';
+import { STATS_BUCKET, STATS_KEY_PREFIX } from '../../hourly/_build-battlegrounds-hero-stats';
 import { buildMmrPercentiles } from '../percentiles';
 import { loadHourlyDataFromS3 } from '../s3-loader';
-import { persistData } from './s3-saver';
+import { persistAnomaliesList, persistData } from './s3-saver';
 import { mergeStats } from './stats-merger';
 
 const allCards = new AllCardsService();
@@ -23,6 +25,7 @@ export default async (event, context: Context): Promise<any> => {
 	const cleanup = logBeforeTimeout(context);
 	const timePeriod: TimePeriod = event.timePeriod;
 	const mmrPercentile: MmrPercentileFilter = event.mmrPercentile;
+	const anomaly: string | null = event.anomaly;
 
 	// console.log('aggregating data', timePeriod, mmrPercentile);
 	// Build the list of files based on the timeframe, and load all of these
@@ -31,8 +34,14 @@ export default async (event, context: Context): Promise<any> => {
 		'hero',
 		timePeriod,
 		mmrPercentile,
+		anomaly,
 		patchInfo,
 	);
+	if (!hourlyData?.length) {
+		console.log('no data found', timePeriod, mmrPercentile, anomaly);
+		cleanup();
+		return;
+	}
 	// console.log('hourlyData', hourlyData.length);
 	const lastUpdate = hourlyData
 		.map((d) => ({
@@ -41,7 +50,6 @@ export default async (event, context: Context): Promise<any> => {
 			time: new Date(d.lastUpdateDate).getTime(),
 		}))
 		.sort((a, b) => b.time - a.time)[0].date;
-	// console.log('loaded hourly data', lastUpdate);
 
 	// Here it's ok that the MMR corresponding to each MMR percentile is not the same across all the hourly data chunks
 	// as the actual MMR evolves over time
@@ -52,15 +60,8 @@ export default async (event, context: Context): Promise<any> => {
 	// when building the hourly data
 	const mergedStats: readonly BgsGlobalHeroStat[] = mergeStats(hourlyData, mmrPercentile, allCards);
 	const mmrPercentiles: readonly MmrPercentile[] = buildMmrPercentiles(hourlyData);
-	// console.log(
-	// 	'mergedStats',
-	// 	mergedStats?.map((s) => s.dataPoints).reduce((a, b) => a + b, 0),
-	// 	mergedStats?.length,
-	// );
-	const testHeroStat = mergedStats.find((stat) => stat.heroCardId === 'BG21_HERO_010');
-	// console.log('testHeroStat', testHeroStat, testHeroStat?.combatWinrate);
 
-	await persistData(mergedStats, mmrPercentiles, lastUpdate, timePeriod, mmrPercentile);
+	await persistData(mergedStats, mmrPercentiles, anomaly, lastUpdate, timePeriod, mmrPercentile);
 	cleanup();
 };
 
@@ -68,29 +69,37 @@ const dispatchEvents = async (context: Context) => {
 	console.log('dispatching events');
 	const allTimePeriod: readonly TimePeriod[] = ['all-time', 'past-three', 'past-seven', 'last-patch'];
 	const mmrPercentiles: readonly MmrPercentileFilter[] = [100, 50, 25, 10, 1];
+	const allAnomalies: readonly (string | null)[] = await readAllAnomalies(
+		STATS_BUCKET,
+		`${STATS_KEY_PREFIX}/hero-stats/anomalies`,
+	);
+	await persistAnomaliesList(allAnomalies);
 	for (const timePeriod of allTimePeriod) {
 		for (const percentile of mmrPercentiles) {
-			const newEvent = {
-				timePeriod: timePeriod,
-				mmrPercentile: percentile,
-			};
-			const params = {
-				FunctionName: context.functionName,
-				InvocationType: 'Event',
-				LogType: 'Tail',
-				Payload: JSON.stringify(newEvent),
-			};
-			// console.log('\tinvoking lambda', params);
-			const result = await lambda
-				.invoke({
+			for (const anomaly of allAnomalies) {
+				const newEvent = {
+					timePeriod: timePeriod,
+					mmrPercentile: percentile,
+					anomaly: anomaly,
+				};
+				const params = {
 					FunctionName: context.functionName,
 					InvocationType: 'Event',
 					LogType: 'Tail',
 					Payload: JSON.stringify(newEvent),
-				})
-				.promise();
-			// console.log('\tinvocation result', result);
-			await sleep(50);
+				};
+				// console.log('\tinvoking lambda', params);
+				const result = await lambda
+					.invoke({
+						FunctionName: context.functionName,
+						InvocationType: 'Event',
+						LogType: 'Tail',
+						Payload: JSON.stringify(newEvent),
+					})
+					.promise();
+				// console.log('\tinvocation result', result);
+				await sleep(50);
+			}
 		}
 	}
 };

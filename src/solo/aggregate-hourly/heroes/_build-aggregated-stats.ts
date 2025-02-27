@@ -14,8 +14,6 @@ const allCards = new AllCardsService();
 export const s3 = new S3();
 const lambda = new AWS.Lambda();
 
-let cachedAllAnomalies: readonly (string | null)[] = null;
-
 export default async (event, context: Context): Promise<any> => {
 	await allCards.initializeCardsDb();
 
@@ -51,7 +49,6 @@ export default async (event, context: Context): Promise<any> => {
 			time: new Date(d.lastUpdateDate).getTime(),
 		}))
 		.sort((a, b) => b.time - a.time)[0].date;
-	// console.log('loaded hourly data', lastUpdate);
 
 	// Here it's ok that the MMR corresponding to each MMR percentile is not the same across all the hourly data chunks
 	// as the actual MMR evolves over time
@@ -62,13 +59,6 @@ export default async (event, context: Context): Promise<any> => {
 	// when building the hourly data
 	const mergedStats: readonly BgsGlobalHeroStat[] = mergeStats(hourlyData, mmrPercentile, allCards);
 	const mmrPercentiles: readonly MmrPercentile[] = buildMmrPercentiles(hourlyData);
-	// console.log(
-	// 	'mergedStats',
-	// 	mergedStats?.map((s) => s.dataPoints).reduce((a, b) => a + b, 0),
-	// 	mergedStats?.length,
-	// );
-	// const testHeroStat = mergedStats.find((stat) => stat.heroCardId === 'BG21_HERO_010');
-	// console.log('testHeroStat', testHeroStat, testHeroStat?.combatWinrate);
 
 	await persistData(mergedStats, mmrPercentiles, anomaly, lastUpdate, timePeriod, mmrPercentile);
 	cleanup();
@@ -82,7 +72,6 @@ const dispatchEvents = async (context: Context) => {
 		STATS_BUCKET,
 		`${STATS_KEY_PREFIX}/hero-stats/anomalies`,
 	);
-	cachedAllAnomalies = allAnomalies;
 	await persistAnomaliesList(allAnomalies);
 	for (const timePeriod of allTimePeriod) {
 		for (const percentile of mmrPercentiles) {

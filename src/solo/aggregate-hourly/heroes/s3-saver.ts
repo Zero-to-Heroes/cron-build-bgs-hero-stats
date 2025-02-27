@@ -13,6 +13,7 @@ export const persistAnomaliesList = async (anomalies: readonly string[]) => {
 		'gzip',
 	);
 };
+
 export const persistData = async (
 	mergedStats: readonly BgsGlobalHeroStat[],
 	mmrPercentiles: readonly MmrPercentile[],
