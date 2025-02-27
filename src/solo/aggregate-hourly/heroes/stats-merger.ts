@@ -54,7 +54,6 @@ const mergeStatsForSingleHero = (stats: readonly BgsGlobalHeroStat[], allCards: 
 		tribeStats: mergeTribeStats(stats, averagePosition).filter(
 			(s) => s.dataPointsOnMissingTribe > s.dataPoints / 20,
 		),
-		anomalyStats: [], // mergeAnomalyStats(stats),
 	};
 	return result;
 };

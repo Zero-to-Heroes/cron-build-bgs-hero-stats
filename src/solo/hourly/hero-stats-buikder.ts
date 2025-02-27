@@ -53,10 +53,6 @@ const buildStatsForSingleHero = (
 	const standardDeviationOfTheMean = standardDeviation / Math.sqrt(rowsForHero.length);
 	// const tribeStartTime = new Date().getTime();
 	const tribeStats = buildTribeStats(rowsForHero, offeredRows, averagePosition);
-	// const tribeProcessTime = new Date().getTime() - tribeStartTime;
-	// const anomalyStartTime = new Date().getTime();
-	// const anomalyStats = buildAnomalyStats(rows, averagePosition, placementDistribution, combatWinrate, warbandStats);
-	// const anomalyProcessTime = new Date().getTime() - anomalyStartTime;
 	const result: BgsGlobalHeroStat = {
 		heroCardId: ref.heroCardId,
 		dataPoints: rowsForHero.length,
@@ -70,7 +66,6 @@ const buildStatsForSingleHero = (
 		combatWinrateRaw: rawCombatWinrates,
 		warbandStatsRaw: rawWarbandStats,
 		tribeStats: tribeStats,
-		anomalyStats: null, //anomalyStats,
 	};
 	// const processTime = new Date().getTime() - startTime;
 	// console.log('\tbuilt for hero', result.heroCardId, result.dataPoints, result);
